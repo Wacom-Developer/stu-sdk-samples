@@ -1,0 +1,33 @@
+#include "DeleteRomImages.h"
+#include <winres.h>
+
+STRINGTABLE
+BEGIN
+  IDS_Title, "DeleteRomImages"
+  IDS_NoTablet, "No Wacom STU Tablet is attached!"
+  IDS_Exception, "Exception"
+  IDS_ConnectFailed, "Unable to connect to tablet"
+  IDS_InvalidPort, "Port name invalid"
+  IDS_InvalidBaudRate, "Baud-rate invalid"
+  IDS_NotSupported, "This tablet does not support ROM images"
+
+  IDS_DeleteRomImages_Done    "Images have been deleted"
+END
+
+#define Serial_OffsetX 4
+#define Serial_OffsetY 27
+
+IDD_Dialog DIALOGEX 0, 0, 128, 96
+STYLE DS_CENTER | DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "DeleteRomImages"
+FONT 9, "MS Shell Dlg"
+BEGIN
+  CONTROL   "Delete", IDC_Dialog_Action, "BUTTON", WS_TABSTOP, 7, 7, 40,15
+
+  GROUPBOX  "Serial", IDC_Serial_Group, Serial_OffsetX+0, Serial_OffsetY+0, 118, 62
+  CONTROL   "Use serial connection", IDC_Serial_Serial, "Button", BS_AUTOCHECKBOX | WS_TABSTOP, Serial_OffsetX+4, Serial_OffsetY+13, 109, 11
+  CONTROL   "Port", IDC_Serial_Port_Label,  "STATIC", SS_LEFT|WS_DISABLED, Serial_OffsetX+4, Serial_OffsetY+31, 35, 11,
+  CONTROL   "COM1", IDC_Serial_Port, "COMBOBOX", WS_BORDER|WS_TABSTOP|CBS_DROPDOWN|CBS_AUTOHSCROLL|WS_DISABLED, Serial_OffsetX+39, Serial_OffsetY+29, 72, 60
+  CONTROL   "Baud-rate", IDC_Serial_BaudRate_Label, "STATIC", SS_LEFT|WS_DISABLED, Serial_OffsetX+4, Serial_OffsetY+47, 35, 11
+  CONTROL   Serial_Default_Baud, IDC_Serial_BaudRate, "EDIT", WS_BORDER|WS_TABSTOP|ES_LEFT|ES_NUMBER|ES_AUTOHSCROLL|WS_DISABLED, Serial_OffsetX+40, Serial_OffsetY+45, 72, 12
+END

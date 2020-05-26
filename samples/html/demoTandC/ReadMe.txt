@@ -1,0 +1,2 @@
+Please note that sjcl.js (required for encryption handling) is a third-party Javascript library which we are not licensed to redistribute.
+It can be obtained from the SJCL project on Github here:  https://github.com/bitwiseshiftleft/sjcl/

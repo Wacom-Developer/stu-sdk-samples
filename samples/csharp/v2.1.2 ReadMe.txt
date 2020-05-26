@@ -1,0 +1,6 @@
+A limitation was found with Visual Studio and the import of wgssSTU.dll as a COM control.
+
+To work around this problem v2.1.2 includes an interop file interop.wgssSTU.dll
+
+To build a .NET project add the reference to the interop.wgssSTU.dll using :
+    Add Reference -> Browse for Files

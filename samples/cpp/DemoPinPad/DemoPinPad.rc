@@ -1,0 +1,52 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "DemoPinPad.h"
+#include <winres.h>
+
+#define Serial_OffsetX 4
+#define Serial_OffsetY 80
+
+IDD_Dialog DIALOGEX 0, 0, 152, 150
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "DemoPinPad"
+FONT 9, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+  CONTROL         "Hide numbers", IDC_DemoPinPad_HideNum, "Button", BS_AUTOCHECKBOX | WS_TABSTOP, 8, 32, 72, 10
+  LTEXT           "Min digits", IDC_DemoPinPad_MinDigit_Lbl, 8, 14, 36, 8
+  CONTROL         "4", IDC_DemoPinPad_MinDigit, "EDIT", WS_BORDER | WS_TABSTOP | ES_LEFT | ES_NUMBER | ES_AUTOHSCROLL, 44, 12, 16, 14
+  LTEXT           "Max digits", IDC_DemoPinPad_MaxDigit_Lbl, 80, 14, 36, 8
+  CONTROL         "5", IDC_DemoPinPad_MaxDigit, "EDIT", WS_BORDER | WS_TABSTOP | ES_LEFT | ES_NUMBER | ES_AUTOHSCROLL, 116, 12, 16, 14
+  PUSHBUTTON      "Start", IDC_DemoPinPad_Start, 30, 52, 40, 15
+  PUSHBUTTON      "Stop", IDC_DemoPinPad_Stop, 80, 52, 40, 15, WS_DISABLED
+
+  GROUPBOX  "Serial", IDC_Serial_Group, Serial_OffsetX+0, Serial_OffsetY+0, 118, 62
+  CONTROL   "Use serial connection", IDC_Serial_Serial, "Button", BS_AUTOCHECKBOX | WS_TABSTOP, Serial_OffsetX+4, Serial_OffsetY+13, 109, 11
+  CONTROL   "Port", IDC_Serial_Port_Label,  "STATIC", SS_LEFT|WS_DISABLED, Serial_OffsetX+4, Serial_OffsetY+31, 35, 11,
+  CONTROL   "COM1", IDC_Serial_Port, "COMBOBOX", WS_BORDER|WS_TABSTOP|CBS_DROPDOWN|CBS_AUTOHSCROLL|WS_DISABLED, Serial_OffsetX+39, Serial_OffsetY+29, 72, 60
+  CONTROL   "Baud-rate", IDC_Serial_BaudRate_Label, "STATIC", SS_LEFT|WS_DISABLED, Serial_OffsetX+4, Serial_OffsetY+47, 35, 11
+  CONTROL   Serial_Default_Baud, IDC_Serial_BaudRate, "EDIT", WS_BORDER|WS_TABSTOP|ES_LEFT|ES_NUMBER|ES_AUTOHSCROLL|WS_DISABLED, Serial_OffsetX+40, Serial_OffsetY+45, 72, 12
+
+END
+
+
+IDB_PINPAD_BTNS_UP      RCDATA                  "PinPadNumBtnUp.png"
+IDB_PINPAD_BTNS_DN      RCDATA                  "PinPadNumBtnDn.png"
+
+
+STRINGTABLE
+BEGIN
+  IDS_Title, "Demo PinPad"
+
+  IDS_NoTablet, "No Wacom STU Tablet is attached!"
+  IDS_Exception, "Exception"
+  IDS_ConnectFailed, "Unable to connect to tablet"
+  IDS_InvalidPort, "Port name invalid"
+  IDS_InvalidBaudRate, "Baud-rate invalid"
+  IDS_NotSupported "The attached STU tablet does not support PinPad mode"
+
+  IDS_DemoPinPad_InvalidDigits "Invalid number of digits"
+  IDS_DemoPinPad_MinDigitsError "You must enter at least %d digits"
+  IDS_DemoPinPad_MaxDigitsError "You must enter at most %d digits"
+  IDS_DemoPinPad_Cancelled "Cancelled"
+END
+

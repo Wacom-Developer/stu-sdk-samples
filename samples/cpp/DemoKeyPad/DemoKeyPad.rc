@@ -1,0 +1,53 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "DemoKeyPad.h"
+#include <winres.h>
+
+#define Serial_OffsetX 4
+#define Serial_OffsetY 80
+
+IDD_Dialog DIALOGEX 0, 0, 152, 150
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "DemoKeyPad"
+FONT 9, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+  GROUPBOX        "Layout", -1, 4, 4, 118, 36
+  CONTROL         "&1", IDC_Dialog_Layout1, "Button", BS_AUTORADIOBUTTON | WS_GROUP, 36, 16, 20, 10
+  CONTROL         "&2", IDC_Dialog_Layout2, "Button", BS_AUTORADIOBUTTON, 66, 16, 20, 10
+  CONTROL         "&3", IDC_Dialog_Layout3, "Button", BS_AUTORADIOBUTTON, 96, 16, 20, 10
+  DEFPUSHBUTTON   "Start", IDC_Dialog_Start, 4, 52, 40, 15, WS_GROUP
+  PUSHBUTTON      "Stop", IDC_Dialog_Stop, 80, 52, 40, 15, WS_DISABLED
+
+
+  GROUPBOX  "Serial", IDC_Serial_Group, Serial_OffsetX+0, Serial_OffsetY+0, 118, 62
+  CONTROL   "Use serial connection", IDC_Serial_Serial, "Button", BS_AUTOCHECKBOX | WS_TABSTOP, Serial_OffsetX+4, Serial_OffsetY+13, 109, 11
+  CONTROL   "Port", IDC_Serial_Port_Label,  "STATIC", SS_LEFT|WS_DISABLED, Serial_OffsetX+4, Serial_OffsetY+31, 35, 11,
+  CONTROL   "COM1", IDC_Serial_Port, "COMBOBOX", WS_BORDER|WS_TABSTOP|CBS_DROPDOWN|CBS_AUTOHSCROLL|WS_DISABLED, Serial_OffsetX+39, Serial_OffsetY+29, 72, 60
+  CONTROL   "Baud-rate", IDC_Serial_BaudRate_Label, "STATIC", SS_LEFT|WS_DISABLED, Serial_OffsetX+4, Serial_OffsetY+47, 35, 11
+  CONTROL   Serial_Default_Baud, IDC_Serial_BaudRate, "EDIT", WS_BORDER|WS_TABSTOP|ES_LEFT|ES_NUMBER|ES_AUTOHSCROLL|WS_DISABLED, Serial_OffsetX+40, Serial_OffsetY+45, 72, 12
+
+END
+
+
+IDB_KEYPAD1_BTNS_UP      RCDATA                  "KeyPad1BtnUp.png"
+IDB_KEYPAD1_BTNS_DN      RCDATA                  "KeyPad1BtnDn.png"
+IDB_KEYPAD2_BTNS_UP      RCDATA                  "KeyPad2BtnUp.png"
+IDB_KEYPAD2_BTNS_DN      RCDATA                  "KeyPad2BtnDn.png"
+IDB_KEYPAD3_BTNS_UP      RCDATA                  "KeyPad3BtnUp.png"
+IDB_KEYPAD3_BTNS_DN      RCDATA                  "KeyPad3BtnDn.png"
+
+
+STRINGTABLE
+BEGIN
+  IDS_Title, "Demo KeyPad"
+
+  IDS_NoTablet, "No Wacom STU Tablet is attached!"
+  IDS_Exception, "Exception"
+  IDS_ConnectFailed, "Unable to connect to tablet"
+  IDS_InvalidPort, "Port name invalid"
+  IDS_InvalidBaudRate, "Baud-rate invalid"
+  IDS_NotSupported "The attached STU tablet does not support Key Pad mode"
+
+  IDS_DemoKeyPad_Result "Key pad result:\n  Screen selected: %d\n  Key number: %d"
+END
+

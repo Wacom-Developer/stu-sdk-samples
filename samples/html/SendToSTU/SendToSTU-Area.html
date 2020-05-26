@@ -1,0 +1,339 @@
+<!--
+/* ==========================================================================
+  SendToSTU-Area.html
+   
+  Internet Explorer demo sends an image to an STU pad
+  With the option to update an area (STU-430/530 only)
+	  
+  v1.0 gdb
+  
+  Copyright (c) 2015 Wacom GmbH. All rights reserved.
+  
+  ========================================================================== */
+-->
+<html>
+<head>
+<title>SendToSTU</title>
+<script type="text/javascript">
+
+// ==========================================================================
+//      Global data
+//
+var gAreaWidth = 160;           // default width/height ratio of the STU-530 dimensions 800x480 
+var gAreaHeight = 96;
+var gAreaTopLeftX = 50;         // arbitrary location to display the area
+var gAreaTopLeftY = 100;
+
+
+// ==========================================================================
+//      Utilities
+//
+
+function print(txt) {
+  var txtDisplay = document.getElementById("txtDisplay");
+  txtDisplay.value += txt + "\n";
+  txtDisplay.scrollTop = txtDisplay.scrollHeight; // scroll to end
+}
+function dec2hex(i) {
+  return( "0x" + ((i<16)?"0":"") + i.toString(16).toUpperCase()); // add leading zero if < 16 e.g. 0x0F
+}
+
+function DisplayImage() {
+		var filename = document.getElementById("imgFilename").value;
+		document.getElementById("idImg").src = filename;
+}
+
+function LoadNewImage()
+{
+        document.getElementById("imgFilename").value = document.getElementById("browseFile").value;
+        var input = document.getElementById("browseFile");
+		var fReader = new FileReader();
+		fReader.readAsDataURL(input.files[0]);
+		fReader.onloadend = function(event)
+		{
+		   var img = document.getElementById("idImg");
+		   img.src = event.target.result;
+		}
+}
+
+function ReadAreaValues() {
+  gAreaWidth = parseInt(document.getElementById("txtAreaWidth").value);
+  gAreaHeight = parseInt(document.getElementById("txtAreaHeight").value);
+  gAreaTopLeftX = parseInt(document.getElementById("txtAreaTopLeftX").value);
+  gAreaTopLeftY = parseInt(document.getElementById("txtAreaTopLeftY").value);
+}
+function SetAreaValues() {
+  document.getElementById("txtAreaWidth").value = gAreaWidth;
+  document.getElementById("txtAreaHeight").value = gAreaHeight;
+  document.getElementById("txtAreaTopLeftX").value = gAreaTopLeftX;
+  document.getElementById("txtAreaTopLeftY").value = gAreaTopLeftY;
+}
+
+// ==========================================================================
+//      UI functions
+//
+
+
+function SendToSTU() {
+		LoadNewImage();
+    var filename = document.getElementById("imgFilename").value;
+		print("SendToSTU: " + filename);
+    sdkSendToSTU(filename);
+}
+function SendToSTU_Area() {
+		LoadNewImage();
+    var filename = document.getElementById("imgFilename").value;
+		print("SendToSTU Area: " + filename);
+    sdkSendToSTU_Area(filename);
+}
+function ClearSTU() {
+		print("Clear STU");
+    sdkClearSTU();
+}
+function getCurrentDir() {
+	var scriptFullName = window.location.pathname; // gets /c:/pathname/file.html
+	scriptFullName = scriptFullName.replace(/\//g,"\\"); //convert all '/' to '\'
+	var scriptPath = scriptFullName.substring( 1, scriptFullName.lastIndexOf("\\")+1 ); // c:\pathname\
+	scriptPath = unescape(scriptPath); // change %20 back to space
+	return( scriptPath );
+}
+function OnLoad() {
+    document.getElementById("imgFilename").value = getCurrentDir() + "640x480.png"; // default to STU-500
+		DisplayImage();
+    SetAreaValues();
+    print("Use the [Browse] button to select an image file. Sample images are included in this folder:");
+    print( getCurrentDir() );
+    print("To display the image on an STU press [Send Image to STU]");
+    print("To update an area of the STU press [Send Image to STU Area]");
+    print("The default area width/height and location X/Y can be modified as required");
+    print("NB: Area update is only supported by the STU-430 and STU-530");
+}
+
+// ==========================================================================
+//      SDK Application code
+//
+
+                                    // enumerations copied from SDK\COM\doc with reformatted syntax
+enumEncodingFlag = {                // encodingFlag reports what the STU device is capable of:
+  EncodingFlag_Zlib : 0x01, 
+  EncodingFlag_1bit : 0x02,         // mono
+  EncodingFlag_16bit : 0x04,        // 16bit colour (520/530)
+  EncodingFlag_24bit : 0x08         // 24bit colour (530)
+}
+
+enumEncodingMode = {                // selects image transformation
+  EncodingMode_1bit : 0x00,         // mono display STU300/430/500
+  EncodingMode_1bit_Zlib : 0x01,    // use zlib compression (not automated by the SDK – the application code has to compress the data)
+  EncodingMode_16bit : 0x02,        // colour stu-520 & 530
+  EncodingMode_24bit : 0x04,        // colour STU 530
+                                    // tablet.supportsWrite() is true if the bulk driver is installed and available
+  EncodingMode_1bit_Bulk : 0x10,    // use bulk driver (520/530) 
+  EncodingMode_16bit_Bulk : 0x12, 
+  EncodingMode_24bit_Bulk : 0x14, 
+
+  EncodingMode_Raw : 0x00, 
+  EncodingMode_Zlib : 0x01, 
+  EncodingMode_Bulk : 0x10, 
+  EncodingMode_16bit_565 : 0x02 
+}
+
+enumScale = {
+  Scale_Stretch : 0, 
+  Scale_Fit : 1, 
+  Scale_Clip : 2 
+}
+
+var tablet;
+var protocolHelper;
+	
+function sdkSendToSTU(filename) {
+  if (connect())
+  {
+    try
+    {
+      var caps = tablet.getCapability();
+      var info = tablet.getInformation();
+      print("STU model: " + info.modelName);
+      var pId = tablet.getProductId();
+      print("Product id: "+ dec2hex(pId));
+      var encodingFlag = protocolHelper.simulateEncodingFlag(pId, caps.encodingFlag);
+      print("encodingFlag: " + dec2hex(encodingFlag));
+      
+      if ((encodingFlag & enumEncodingFlag.EncodingFlag_24bit) != 0)
+      {
+        encodingMode = tablet.supportsWrite() ? enumEncodingMode.EncodingMode_24bit_Bulk : enumEncodingMode.EncodingMode_24bit; 
+      }
+      else if ((encodingFlag & enumEncodingFlag.EncodingFlag_16bit) != 0)
+      {
+        encodingMode = tablet.supportsWrite() ? enumEncodingMode.EncodingMode_16bit_Bulk : enumEncodingMode.EncodingMode_16bit; 
+      }
+      else
+      {
+        // assumes 1bit is available
+        encodingMode = enumEncodingMode.EncodingMode_1bit; 
+      }
+      print("encodingMode: " + dec2hex(encodingMode));
+
+      var stuImage = protocolHelper.resizeAndFlatten(unescape(filename), 0, 0, 0, 0, caps.screenWidth, caps.screenHeight, encodingMode, enumScale.Scale_Fit, false, 0);
+      tablet.writeImage(encodingMode, stuImage);	  // uses the colour mode flags in encodingMode
+      tablet.disconnect();
+    }
+    catch(e)
+    {
+      print("Exception: " + e.message);
+    }
+  }
+}
+
+function sdkSendToSTU_Area(filename) {
+  ReadAreaValues();
+  if (connect())
+  {
+    try
+    {
+      var caps = tablet.getCapability();
+      var info = tablet.getInformation();
+      print("STU model: " + info.modelName);
+      var pId = tablet.getProductId();
+      print("Product id: "+ dec2hex(pId));
+      var encodingFlag = protocolHelper.simulateEncodingFlag(pId, caps.encodingFlag);
+      print("encodingFlag: " + dec2hex(encodingFlag));
+      
+      if ((encodingFlag & enumEncodingFlag.EncodingFlag_24bit) != 0)
+      {
+        encodingMode = tablet.supportsWrite() ? enumEncodingMode.EncodingMode_24bit_Bulk : enumEncodingMode.EncodingMode_24bit; 
+      }
+      else if ((encodingFlag & enumEncodingFlag.EncodingFlag_16bit) != 0)
+      {
+        encodingMode = tablet.supportsWrite() ? enumEncodingMode.EncodingMode_16bit_Bulk : enumEncodingMode.EncodingMode_16bit; 
+      }
+      else
+      {
+        // assumes 1bit is available
+        encodingMode = enumEncodingMode.EncodingMode_1bit; 
+      }
+      print("encodingMode: " + dec2hex(encodingMode));
+  
+      var rect = new ActiveXObject("WacomGSS.STU.Rectangle");
+      rect.upperLeftXPixel  = gAreaTopLeftX;
+      rect.LowerRightXPixel = rect.upperLeftXPixel + gAreaWidth -1;  // -1 for pixel address
+      rect.upperLeftYPixel  = gAreaTopLeftY;
+      rect.LowerRightYPixel = rect.upperLeftYPixel + gAreaHeight -1; // -1 for pixel address
+
+      print("Update image area:");
+      print("Width x Height: "+gAreaWidth+"x"+gAreaHeight+"px");
+      print("Location: X,Y = "+gAreaTopLeftX+","+gAreaTopLeftY);
+      
+      var stuImage = protocolHelper.resizeAndFlatten(unescape(filename), 0, 0, 0, 0, gAreaWidth, gAreaHeight, encodingMode, enumScale.Scale_Fit, false, 0);
+      tablet.writeImageArea(encodingMode, rect, stuImage);
+      tablet.disconnect();
+    }
+    catch(e)
+    {
+      print("Exception: " + e.message);
+    }
+  }
+}
+
+function sdkClearSTU() {
+  if (connect())
+  {
+    try
+    {
+      tablet.setClearScreen();
+      tablet.disconnect();
+    }
+    catch(e)
+    {
+      print("Exception: " + e.message);
+    }
+  }
+}
+
+function connect()
+{
+  var connected = false;
+  try 
+  {
+    var usbDevices;
+    usbDevices = new ActiveXObject("WacomGSS.STU.UsbDevices");
+
+    var count = usbDevices.Count;
+
+    if (count > 0)
+    {
+      var usbDevice = usbDevices.Item(0);     // use the first STU found in the list.
+
+      if (tablet == null)
+      {
+        protocolHelper = new ActiveXObject("WacomGSS.STU.ProtocolHelper");
+        tablet = new ActiveXObject("WacomGSS.STU.Tablet");
+      }
+
+      var r1 = tablet.usbConnect(usbDevice, false);
+      var r = r1.value;
+
+      if (r == 0)
+      {
+        connected = true;
+      }
+      else 
+      {
+        print("Connect failed");
+      }
+    } 
+    else
+    {
+      print("No devices connected");
+    }
+    usbDevices = null;
+  }
+  catch (e) 
+  {
+    print("Exception: "+ e.message);
+  }
+  return connected;
+}
+
+
+-->
+</script>
+</head>
+<body onload="OnLoad()">
+		<h1>SendToSTU Area</h1>
+<table>
+     <tr>
+          <td rowspan="3" style="border:1px solid black;width:250pt;height:190pt;">
+               <img id="idImg" style="width:250pt;"/>
+          </td>
+          <td>
+          <input type="button" value="Send Image to STU" style="width:45mm;height:10mm;margin-left:5mm"  onClick="SendToSTU();"
+                    title="Sends the image file to the STU display"/>
+          </td>
+     </tr>
+     <tr>
+          <td>
+          <input type="button" value="Send Image to STU Area" style="width:45mm;height:10mm;margin-left:5mm"  onClick="SendToSTU_Area();"
+                    title="Sends the image file to an area of the STU display"/>
+          <br/><br/>
+          <span style="margin-left:5mm" />
+          Width:  <input id="txtAreaWidth" type="text"  size="3" />
+          Height: <input id="txtAreaHeight" type="text" size="3" />
+          Location X:  <input id="txtAreaTopLeftX" type="text"  size="3" />
+          Y:  <input id="txtAreaTopLeftY" type="text"  size="3" />
+          </td>
+     </tr>
+     <tr>
+          <td>
+          <input type="button" value="Clear" style="width:45mm;height:10mm;margin-left:5mm"  onClick="ClearSTU();"
+                    title="Clears the STU display"/>
+          </td>
+     </tr>
+</table>
+  <p/>
+  <input type="hidden" id="imgFilename" />
+  <input type="file" id="browseFile" size=80 onchange="LoadNewImage();" />
+  <br/><br/>
+  <textarea cols="125" rows="15" id="txtDisplay"></textarea>
+</body>
+</html>

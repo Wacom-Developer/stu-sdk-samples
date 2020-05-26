@@ -1,0 +1,45 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "DemoSlideShow.h"
+#include <winres.h>
+
+#define Serial_OffsetX 4
+#define Serial_OffsetY 80
+
+IDD_Dialog DIALOGEX 0, 0, 152, 150
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "DemoSlideShow"
+FONT 9, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+  PUSHBUTTON      "Upload", IDC_DemoSlideShow_Upload, 4, 4, 40, 15
+  PUSHBUTTON      "Start", IDC_DemoSlideShow_Start, 30, 52, 40, 15
+  PUSHBUTTON      "Stop", IDC_DemoSlideShow_Stop, 80, 52, 40, 15
+
+  GROUPBOX  "Serial", IDC_Serial_Group, Serial_OffsetX+0, Serial_OffsetY+0, 118, 62
+  CONTROL   "Use serial connection", IDC_Serial_Serial, "Button", BS_AUTOCHECKBOX | WS_TABSTOP, Serial_OffsetX+4, Serial_OffsetY+13, 109, 11
+  CONTROL   "Port", IDC_Serial_Port_Label,  "STATIC", SS_LEFT|WS_DISABLED, Serial_OffsetX+4, Serial_OffsetY+31, 35, 11,
+  CONTROL   "COM1", IDC_Serial_Port, "COMBOBOX", WS_BORDER|WS_TABSTOP|CBS_DROPDOWN|CBS_AUTOHSCROLL|WS_DISABLED, Serial_OffsetX+39, Serial_OffsetY+29, 72, 60
+  CONTROL   "Baud-rate", IDC_Serial_BaudRate_Label, "STATIC", SS_LEFT|WS_DISABLED, Serial_OffsetX+4, Serial_OffsetY+47, 35, 11
+  CONTROL   Serial_Default_Baud, IDC_Serial_BaudRate, "EDIT", WS_BORDER|WS_TABSTOP|ES_LEFT|ES_NUMBER|ES_AUTOHSCROLL|WS_DISABLED, Serial_OffsetX+40, Serial_OffsetY+45, 72, 12
+
+END
+
+
+1 RCDATA "lighthouse.png"
+2 RCDATA "penguins.png"
+3 RCDATA "signing.png"
+
+
+STRINGTABLE
+BEGIN
+  IDS_Title, "Demo SlideShow"
+
+  IDS_NoTablet, "No Wacom STU Tablet is attached!"
+  IDS_Exception, "Exception"
+  IDS_ConnectFailed, "Unable to connect to tablet"
+  IDS_InvalidPort, "Port name invalid"
+  IDS_InvalidBaudRate, "Baud-rate invalid"
+  IDS_NotSupported "The attached STU tablet does not support PinPad mode"
+
+END
+
