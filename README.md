@@ -1,4 +1,4 @@
-# Wacom Ink Connectivity - STU SDK
+# Wacom Device Kit - STU SDK
 
 ## Introduction
 
