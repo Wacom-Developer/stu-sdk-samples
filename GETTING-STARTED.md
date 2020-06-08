@@ -6,7 +6,7 @@
 Download the SDK from https://developer.wacom.com/developer-dashboard
 
 * Login using your Wacom ID
-* Select **Downloads for Wacom Ink Connectivity**
+* Select **Downloads for Wacom Device Kit**
 * Download **STU SDK for Windows Desktop** and/or **STU SDK for Linux**
 * Accept the End User License Agreement to use the SDK
 

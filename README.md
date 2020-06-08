@@ -138,7 +138,7 @@ This reports incoming raw data, which can then be given to **ReportHandler** to 
 For further samples check Wacom's Developer additional samples, see [https://github.com/Wacom-Developer](https://github.com/Wacom-Developer)
 
 ## Documentation
-For further details on using the SDK see [Wacom Ink Connectivity - STU SDK](http://will-docs.westeurope.cloudapp.azure.com/ ) 
+For further details on using the SDK see [Wacom Device Kit - STU SDK](http://will-docs.westeurope.cloudapp.azure.com/ ) 
 
 The API Reference is available directly in the downloaded SDK.
 
