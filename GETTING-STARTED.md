@@ -24,9 +24,11 @@ Run the STU-SDK MSI installer to install the components and samples.
 
 Each language has its own sample code and programming reference.
 Having installed the SDK you will find separate Doc folders containing the full API reference, see index.html for each language:
+
 *	C
 *	COM
 *	CPP
+
 The SDK includes binaries for 32-bit and 64-bit windows.
 The installer registers the 32-bit COM component wgssSTU.dll for immediate use in the sample code.
 
