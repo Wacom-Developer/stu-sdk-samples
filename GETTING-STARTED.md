@@ -24,21 +24,21 @@ Run the STU-SDK MSI installer to install the components and samples.
 
 Each language has its own sample code and programming reference.
 Having installed the SDK you will find separate Doc folders containing the full API reference, see index.html for each language:
-•	C
-•	COM
-•	CPP
+*	C
+*	COM
+*	CPP
 The SDK includes binaries for 32-bit and 64-bit windows.
 The installer registers the 32-bit COM component wgssSTU.dll for immediate use in the sample code.
 
 ### Linux
-•	Ensure you have the dependencies installed. This should include: libusb-1.0 and libusb-1.0-devel. 
-•	We have currently tested only on fedora16 i686. 
-•	Allow user-access to your STU tablet. This usually requires adding a udev rule, for example:
+*	Ensure you have the dependencies installed. This should include: libusb-1.0 and libusb-1.0-devel. 
+*	We have currently tested only on fedora16 i686. 
+*	Allow user-access to your STU tablet. This usually requires adding a udev rule, for example:
 ```
 SUBSYSTEM=="usb", ATTRS{idVendor}=="056a", ATTRS{idProduct}=="00a[0-9|a-f]", MODE="0666", GROUP="users"
 ```
  
-•	NOTE: Remember to install the **libwgssSTU.so**, for example (note paths maybe different):
+*	NOTE: Remember to install the **libwgssSTU.so**, for example (note paths maybe different):
 ```
 sudo cp libwgssSTU.so.0.0.x /usr/local/lib
 sudo /sbin/ldconfig /usr/local/lib
