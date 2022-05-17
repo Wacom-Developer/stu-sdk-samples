@@ -1,0 +1,13 @@
+C:\STU-SDK-Samples\csharp\DemoButtons-usingEncryption\bin\Debug\DemoButtons.exe
+C:\STU-SDK-Samples\csharp\DemoButtons-usingEncryption\bin\Debug\DemoButtons.pdb
+C:\STU-SDK-Samples\csharp\DemoButtons-usingEncryption\bin\Debug\Interop.wgssSTU.dll
+C:\STU-SDK-Samples\csharp\DemoButtons-usingEncryption\obj\x86\Debug\ResolveAssemblyReference.cache
+C:\STU-SDK-Samples\csharp\DemoButtons-usingEncryption\obj\x86\Debug\DemoButtons.DemoButtonsForm.resources
+C:\STU-SDK-Samples\csharp\DemoButtons-usingEncryption\obj\x86\Debug\DemoButtons.MyEncryptionHandler2.resources
+C:\STU-SDK-Samples\csharp\DemoButtons-usingEncryption\obj\x86\Debug\DemoButtons.Properties.Resources.resources
+C:\STU-SDK-Samples\csharp\DemoButtons-usingEncryption\obj\x86\Debug\ResGen.read.1.tlog
+C:\STU-SDK-Samples\csharp\DemoButtons-usingEncryption\obj\x86\Debug\ResGen.write.1.tlog
+C:\STU-SDK-Samples\csharp\DemoButtons-usingEncryption\obj\x86\Debug\DemoButtons.exe
+C:\STU-SDK-Samples\csharp\DemoButtons-usingEncryption\obj\x86\Debug\DemoButtons.pdb
+D:\STU-SDK-Samples\csharp\DemoButtons-usingEncryption\DemoButtons-usingEncryption\obj\x86\Debug\DemoButtons.exe
+D:\STU-SDK-Samples\csharp\DemoButtons-usingEncryption\DemoButtons-usingEncryption\obj\x86\Debug\DemoButtons.pdb
