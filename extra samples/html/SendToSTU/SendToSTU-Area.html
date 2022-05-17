@@ -1,8 +1,9 @@
 <!--
 /* ==========================================================================
-  SendToSTU.html
+  SendToSTU-Area.html
    
   Internet Explorer demo sends an image to an STU pad
+  With the option to update an area (STU-430/530 only)
 	  
   v1.0 gdb
   
@@ -15,7 +16,15 @@
 <title>SendToSTU</title>
 <script type="text/javascript">
 
-<!--
+// ==========================================================================
+//      Global data
+//
+var gAreaWidth = 160;           // default width/height ratio of the STU-530 dimensions 800x480 
+var gAreaHeight = 96;
+var gAreaTopLeftX = 50;         // arbitrary location to display the area
+var gAreaTopLeftY = 100;
+
+
 // ==========================================================================
 //      Utilities
 //
@@ -33,12 +42,39 @@ function DisplayImage() {
 		var filename = document.getElementById("imgFilename").value;
 		document.getElementById("idImg").src = filename;
 }
+function ReadAreaValues() {
+  gAreaWidth = parseInt(document.getElementById("txtAreaWidth").value);
+  gAreaHeight = parseInt(document.getElementById("txtAreaHeight").value);
+  gAreaTopLeftX = parseInt(document.getElementById("txtAreaTopLeftX").value);
+  gAreaTopLeftY = parseInt(document.getElementById("txtAreaTopLeftY").value);
+}
+function SetAreaValues() {
+  document.getElementById("txtAreaWidth").value = gAreaWidth;
+  document.getElementById("txtAreaHeight").value = gAreaHeight;
+  document.getElementById("txtAreaTopLeftX").value = gAreaTopLeftX;
+  document.getElementById("txtAreaTopLeftY").value = gAreaTopLeftY;
+}
+
+// ==========================================================================
+//      UI functions
+//
+
 
 function SendToSTU() {
 		DisplayImage();
     var filename = document.getElementById("imgFilename").value;
 		print("SendToSTU: " + filename);
     sdkSendToSTU(filename);
+}
+function SendToSTU_Area() {
+		DisplayImage();
+    var filename = document.getElementById("imgFilename").value;
+		print("SendToSTU Area: " + filename);
+    sdkSendToSTU_Area(filename);
+}
+function ClearSTU() {
+		print("Clear STU");
+    sdkClearSTU();
 }
 function getCurrentDir() {
 	var scriptFullName = window.location.pathname; // gets /c:/pathname/file.html
@@ -50,9 +86,13 @@ function getCurrentDir() {
 function OnLoad() {
     document.getElementById("imgFilename").value = getCurrentDir() + "640x480.png"; // default to STU-500
 		DisplayImage();
+    SetAreaValues();
     print("Use the [Browse] button to select an image file. Sample images are included in this folder:");
     print( getCurrentDir() );
     print("To display the image on an STU press [Send Image to STU]");
+    print("To update an area of the STU press [Send Image to STU Area]");
+    print("The default area width/height and location X/Y can be modified as required");
+    print("NB: Area update is only supported by the STU-430 and STU-530");
 }
 
 // ==========================================================================
@@ -131,6 +171,71 @@ function sdkSendToSTU(filename) {
   }
 }
 
+function sdkSendToSTU_Area(filename) {
+  ReadAreaValues();
+  if (connect())
+  {
+    try
+    {
+      var caps = tablet.getCapability();
+      var info = tablet.getInformation();
+      print("STU model: " + info.modelName);
+      var pId = tablet.getProductId();
+      print("Product id: "+ dec2hex(pId));
+      var encodingFlag = protocolHelper.simulateEncodingFlag(pId, caps.encodingFlag);
+      print("encodingFlag: " + dec2hex(encodingFlag));
+      
+      if ((encodingFlag & enumEncodingFlag.EncodingFlag_24bit) != 0)
+      {
+        encodingMode = tablet.supportsWrite() ? enumEncodingMode.EncodingMode_24bit_Bulk : enumEncodingMode.EncodingMode_24bit; 
+      }
+      else if ((encodingFlag & enumEncodingFlag.EncodingFlag_16bit) != 0)
+      {
+        encodingMode = tablet.supportsWrite() ? enumEncodingMode.EncodingMode_16bit_Bulk : enumEncodingMode.EncodingMode_16bit; 
+      }
+      else
+      {
+        // assumes 1bit is available
+        encodingMode = enumEncodingMode.EncodingMode_1bit; 
+      }
+      print("encodingMode: " + dec2hex(encodingMode));
+  
+      var rect = new ActiveXObject("WacomGSS.STU.Rectangle");
+      rect.upperLeftXPixel  = gAreaTopLeftX;
+      rect.LowerRightXPixel = rect.upperLeftXPixel + gAreaWidth -1;  // -1 for pixel address
+      rect.upperLeftYPixel  = gAreaTopLeftY;
+      rect.LowerRightYPixel = rect.upperLeftYPixel + gAreaHeight -1; // -1 for pixel address
+
+      print("Update image area:");
+      print("Width x Height: "+gAreaWidth+"x"+gAreaHeight+"px");
+      print("Location: X,Y = "+gAreaTopLeftX+","+gAreaTopLeftY);
+      
+      var stuImage = protocolHelper.resizeAndFlatten(unescape(filename), 0, 0, 0, 0, gAreaWidth, gAreaHeight, encodingMode, enumScale.Scale_Fit, false, 0);
+      tablet.writeImageArea(encodingMode, rect, stuImage);
+      tablet.disconnect();
+    }
+    catch(e)
+    {
+      print("Exception: " + e.message);
+    }
+  }
+}
+
+function sdkClearSTU() {
+  if (connect())
+  {
+    try
+    {
+      tablet.setClearScreen();
+      tablet.disconnect();
+    }
+    catch(e)
+    {
+      print("Exception: " + e.message);
+    }
+  }
+}
+
 function connect()
 {
   var connected = false;
@@ -181,15 +286,33 @@ function connect()
 </script>
 </head>
 <body onload="OnLoad()">
-		<h1>SendToSTU</h1>
+		<h1>SendToSTU Area</h1>
 <table>
      <tr>
-          <td style="border:1px solid black;width:250pt;height:190pt;">
+          <td rowspan="3" style="border:1px solid black;width:250pt;height:190pt;">
                <img id="idImg" style="width:250pt;"/>
           </td>
           <td>
-          <input type="button" value="Send Image to STU" style="width:40mm;margin-left:5mm"  onClick="SendToSTU();"
+          <input type="button" value="Send Image to STU" style="width:45mm;height:10mm;margin-left:5mm"  onClick="SendToSTU();"
                     title="Sends the image file to the STU display"/>
+          </td>
+     </tr>
+     <tr>
+          <td>
+          <input type="button" value="Send Image to STU Area" style="width:45mm;height:10mm;margin-left:5mm"  onClick="SendToSTU_Area();"
+                    title="Sends the image file to an area of the STU display"/>
+          <br/><br/>
+          <span style="margin-left:5mm" />
+          Width:  <input id="txtAreaWidth" type="text"  size="3" />
+          Height: <input id="txtAreaHeight" type="text" size="3" />
+          Location X:  <input id="txtAreaTopLeftX" type="text"  size="3" />
+          Y:  <input id="txtAreaTopLeftY" type="text"  size="3" />
+          </td>
+     </tr>
+     <tr>
+          <td>
+          <input type="button" value="Clear" style="width:45mm;height:10mm;margin-left:5mm"  onClick="ClearSTU();"
+                    title="Clears the STU display"/>
           </td>
      </tr>
 </table>
