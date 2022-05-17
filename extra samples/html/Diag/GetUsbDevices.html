@@ -1,1 +1,92 @@
+<!--
+/* ==========================================================================
+  GetUsbDevices.html
+   
+  Internet Explorer demo detects an STU pad
+	  
+  v1.0 gdb
+  
+  Copyright (c) 2015 Wacom GmbH. All rights reserved.
+  
+  ========================================================================== */
+-->
+<html>
+<head>
+<title>GetUsbDevices</title>
+<script type="text/javascript">
 
+<!--
+// ==========================================================================
+//      Utilities
+//
+
+function print(txt) {
+  var txtDisplay = document.getElementById("txtDisplay");
+  txtDisplay.value += txt + "\n";
+  txtDisplay.scrollTop = txtDisplay.scrollHeight; // scroll to end
+}
+function dec2hex(i) {
+  return( "0x" + ((i<16)?"0":"") + i.toString(16).toUpperCase()); // add leading zero if < 16 e.g. 0x0F
+}
+
+function GetComponents() {
+  try {
+    var component = new ActiveXObject("WacomGSS.STU.Component");
+    print("Component Information: ");
+    print("BEGIN");
+    print(component.diagnosticInformation());
+    print("END");
+    }
+  catch (e) 
+  {
+    print("Exception: "+ e.message);
+  }
+}
+
+function GetUsbDevicesInfo() {
+  try {
+    var usbDevices = new ActiveXObject("WacomGSS.STU.UsbDevices");
+    var usbDevice;
+    var count = usbDevices.Count;
+    print(count +" devices found");
+
+    var tablet = new ActiveXObject("WacomGSS.STU.Tablet");
+    var res,info;
+    
+    for(i=0; i<count; ++i) {
+      usbDevice = usbDevices.Item(i);
+      print("Product ID: " + dec2hex(usbDevice.idVendor) +":"+dec2hex(usbDevice.idProduct));
+      res = tablet.usbConnect(usbDevice, false);
+      if(res.value == 0) {
+        info = tablet.getInformation();
+        print("Model: " + info.modelName);
+        tablet.disconnect();
+      }
+      else {
+        print("Unable to connect");
+      }
+    }
+  }
+  catch (e) 
+  {
+    print("Exception: "+ e.message);
+  }
+}
+function OnLoad() {
+    print("Ready");
+}
+
+
+-->
+</script>
+</head>
+<body onload="OnLoad()">
+  <h1>GetUsbDevices</h1>
+  <input type="button" value="Component info" style="width:40mm;margin-left:5mm"  onClick="GetComponents();"
+                  title="Display component diagnostic data"/>
+  <input type="button" value="USB Device Info" style="width:40mm;margin-left:5mm"  onClick="GetUsbDevicesInfo();"
+                  title="Lists connected STU tablet info"/>
+  <br/><br/>
+  <textarea cols="125" rows="15" id="txtDisplay"></textarea>
+</body>
+</html>
