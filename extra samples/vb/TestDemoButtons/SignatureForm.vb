@@ -3,8 +3,15 @@
 '
 ' Display signature input form on PC screen and on STU pad and process user input
 '
-' Copyright (c) 2015 Wacom GmbH. All rights reserved
+' Copyright (c) 2022 Wacom Ltd. All rights reserved
 '
+Enum PenDataOptionMode
+  PenDataOptionMode_None
+  PenDataOptionMode_TimeCount
+  PenDataOptionMode_SequenceNumber
+  PenDataOptionMode_TimeCountSequence
+End Enum
+
 Public Class SignatureForm
 
     Private m_tablet As wgssSTU.Tablet
@@ -33,7 +40,8 @@ Public Class SignatureForm
     Private m_isDown As Int16
 
     Private m_penData As List(Of wgssSTU.IPenData) ' Array of data being stored. This can be subsequently used as desired.
-
+    Private m_penTimeData As List(Of wgssSTU.IPenDataTimeCountSequence) ' Array of data being stored. This can be subsequently used as desired.
+    Private m_penDataOptionMode As Int16 ' The pen data Option mode flag - basic Or With time And sequence counts
     Private m_btns() As Button  ' The array of buttons that we are emulating.
 
     Private m_bitmap As Bitmap      ' This bitmap that we display on the screen.
@@ -44,10 +52,11 @@ Public Class SignatureForm
 
     ' SignatureForm
     Public Sub New(ByVal ParentForm As DemoButtonsForm, ByVal usbDevice As wgssSTU.IUsbDevice)
-        m_ParentForm = ParentForm
+    m_ParentForm = ParentForm
+    Dim currentPenDataOptionMode As Int16
 
-        Me.AutoScaleDimensions = New System.Drawing.SizeF(96.0F, 96.0F)
-        Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi
+    Me.AutoScaleDimensions = New System.Drawing.SizeF(96.0F, 96.0F)
+    Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi
 
         InitializeComponent() ' This call is required by the Windows Form Designer.
 
@@ -61,6 +70,11 @@ Public Class SignatureForm
             m_capability = m_tablet.getCapability()
             m_information = m_tablet.getInformation()
             print("Connected " + m_information.modelName)
+            
+            currentPenDataOptionMode = getPenDataOptionMode(m_tablet, ParentForm)
+
+            ' Set up the tablet to return time stamp with the pen data Or just basic data
+            setPenDataOptionMode(currentPenDataOptionMode)
         Else
             Throw New Exception(ec.message)
         End If
@@ -223,18 +237,98 @@ Public Class SignatureForm
 
 
         ' Add the delagate that receives pen data.
-        AddHandler m_tablet.onPenData, New wgssSTU.ITabletEvents2_onPenDataEventHandler(AddressOf onPenData)
+        Select Case m_penDataOptionMode
+           Case PenDataOptionMode.PenDataOptionMode_TimeCountSequence
+              m_ParentForm.print("Setting up pen timed data handler")
+              AddHandler m_tablet.onPenDataTimeCountSequence, New wgssSTU.ITabletEvents2_onPenDataTimeCountSequenceEventHandler(AddressOf onPenDataTimeCountSequence)
+           Case PenDataOptionMode.PenDataOptionMode_TimeCount
+              m_ParentForm.print("Setting up pen timed data handler")
+              AddHandler m_tablet.onPenData, New wgssSTU.ITabletEvents2_onPenDataEventHandler(AddressOf onPenData)
+           Case Else
+              m_ParentForm.print("Setting up basic pen data handler")
+              AddHandler m_tablet.onPenData, New wgssSTU.ITabletEvents2_onPenDataEventHandler(AddressOf onPenData)
+        End Select
+
         AddHandler m_tablet.onGetReportException, New wgssSTU.ITabletEvents2_onGetReportExceptionEventHandler(AddressOf onGetReportException)
 
-        ' Initialize the screen
-        clearScreen()
+    ' Initialize the screen
+    clearScreen(m_tablet)
 
-        ' Enable the pen data on the screen (if not already)
-        m_tablet.setInkingMode(&H1)
-
-
+    ' Enable the pen data on the screen (if not already)
+    m_tablet.setInkingMode(&H1)
 
     End Sub
+    
+    Private Function getPenDataOptionMode(ByVal tablet As wgssSTU.Tablet, ByVal parentForm As DemoButtonsForm)
+      Dim penDataOptionMode As Int16
+
+      Try
+         penDataOptionMode = tablet.getPenDataOptionMode()
+      Catch optionModeException As Exception
+         m_ParentForm.print("Tablet doesn't support getPenDataOptionMode: " + optionModeException.Message)
+         penDataOptionMode = -1
+      End Try
+      parentForm.print("Pen data option mode: " + m_penDataOptionMode.ToString())
+
+      Return penDataOptionMode
+   End Function
+
+   Private Sub setPenDataOptionMode(ByVal currentPenDataOptionMode As Int16)
+      ' If the current option mode Is TimeCount then this Is a 520 so we must reset the mode
+      ' to basic data only as there Is no handler for TimeCount
+
+      m_ParentForm.print("current mode: " + currentPenDataOptionMode.ToString())
+
+      Select Case (currentPenDataOptionMode)
+         Case -1
+            ' THis must be the 300 which doesn't support getPenDataOptionMode at all so only basic data
+            m_penDataOptionMode = PenDataOptionMode.PenDataOptionMode_None
+
+         Case PenDataOptionMode.PenDataOptionMode_None
+            ' If the current option mode Is "none" then it could be any pad so try setting the full option
+            ' And if it fails Or ends up as TimeCount then set it to none
+            Try
+               m_tablet.setPenDataOptionMode(wgssSTU.penDataOptionMode.PenDataOptionMode_TimeCountSequence)
+               m_penDataOptionMode = m_tablet.getPenDataOptionMode()
+               If (m_penDataOptionMode = PenDataOptionMode.PenDataOptionMode_TimeCount) Then
+                  m_tablet.setPenDataOptionMode(wgssSTU.penDataOptionMode.PenDataOptionMode_None)
+                  m_penDataOptionMode = PenDataOptionMode.PenDataOptionMode_None
+               Else
+                  m_penDataOptionMode = PenDataOptionMode.PenDataOptionMode_TimeCountSequence
+               End If
+            Catch ex As Exception
+               '  THis shouldn't happen but just in case...
+               m_ParentForm.print("Using basic pen data")
+               m_penDataOptionMode = PenDataOptionMode.PenDataOptionMode_None
+            End Try
+
+         Case PenDataOptionMode.PenDataOptionMode_TimeCount
+            m_tablet.setPenDataOptionMode(wgssSTU.penDataOptionMode.PenDataOptionMode_None)
+            m_penDataOptionMode = PenDataOptionMode.PenDataOptionMode_None
+
+         Case PenDataOptionMode.PenDataOptionMode_TimeCountSequence
+            ' If the current mode Is timecountsequence then leave it at that
+            m_penDataOptionMode = currentPenDataOptionMode
+      End Select
+
+      Select Case m_penDataOptionMode
+         Case PenDataOptionMode.PenDataOptionMode_None
+            m_penData = New List(Of wgssSTU.IPenData)
+            m_ParentForm.print("None")
+         Case PenDataOptionMode.PenDataOptionMode_TimeCount
+            m_penData = New List(Of wgssSTU.IPenData)
+            m_ParentForm.print("Time count")
+         Case PenDataOptionMode.PenDataOptionMode_SequenceNumber
+            m_penData = New List(Of wgssSTU.IPenData)
+            m_ParentForm.print("Seq number")
+         Case PenDataOptionMode.PenDataOptionMode_TimeCountSequence
+            m_penTimeData = New List(Of wgssSTU.IPenDataTimeCountSequence)
+            m_ParentForm.print("Time count + seq")
+         Case Else
+            m_penData = New List(Of wgssSTU.IPenData)
+      End Select
+   End Sub
+   
     Private Function tabletToClient(ByVal penData As wgssSTU.IPenData)
 
         ' Client means the Windows Form coordinates.
@@ -242,6 +336,13 @@ Public Class SignatureForm
         Return New PointF(CDbl(penData.x) * CDbl(Me.ClientSize.Width) / CDbl(m_capability.tabletMaxX), CDbl(penData.y) * CDbl(Me.ClientSize.Height) / CDbl(m_capability.tabletMaxY))
     End Function
 
+    Private Function tabletToClientTimed(ByVal penData As wgssSTU.IPenDataTimeCountSequence)
+
+       ' Client means the Windows Form coordinates.
+       'Return New PointF(penData.x * Me.ClientSize.Width / m_capability.tabletMaxX, penData.y * Me.ClientSize.Height / m_capability.tabletMaxY)
+       Return New PointF(CDbl(penData.x) * CDbl(Me.ClientSize.Width) / CDbl(m_capability.tabletMaxX), CDbl(penData.y) * CDbl(Me.ClientSize.Height) / CDbl(m_capability.tabletMaxY))
+    End Function
+   
     Private Function tabletToScreen(ByVal penData As wgssSTU.IPenData)
         ' Screen means LCD screen of the tablet.
         Return Point.Round(New PointF(CDbl(penData.x) * CDbl(m_capability.screenWidth) / CDbl(m_capability.tabletMaxX), CDbl(penData.y) * CDbl(m_capability.screenHeight) / CDbl(m_capability.tabletMaxY)))
@@ -255,35 +356,70 @@ Public Class SignatureForm
         Return Point.Round(New PointF(CDbl(pt.X) * CDbl(m_capability.screenWidth) / CDbl(Me.ClientSize.Width), CDbl(pt.Y) * CDbl(m_capability.screenHeight) / CDbl(Me.ClientSize.Height)))
     End Function
 
-    Private Sub clearScreen()
-        ' note: There is no need to clear the tablet screen prior to writing an image.
-        m_tablet.writeImage(m_encodingMode, m_bitmapData)
+  Private Sub clearScreen(ByRef tablet As wgssSTU.Tablet)
+    ' note: There is no need to clear the tablet screen prior to writing an image.
+    ' m_tablet.writeImage(m_encodingMode, m_bitmapData)
 
-        m_penData.Clear()
-        m_isDown = 0
-        Me.Invalidate()
-    End Sub
+    Try
+      If (tablet IsNot Nothing) Then
+        tablet.writeImage(m_encodingMode, m_bitmapData)
+      End If
+    Catch ex As Exception
+      MessageBox.Show(ex.Message)
+    End Try
+
+    If (m_penDataOptionMode = PenDataOptionMode.PenDataOptionMode_TimeCountSequence) Then
+      m_penTimeData.Clear()
+    Else
+      m_penData.Clear()
+    End If
+    m_isDown = 0
+    Me.Invalidate()
+  End Sub
 
 
-    Private Sub btnCancel_Click(ByVal sender As System.Object, ByVal e As System.EventArgs)
-        Me.m_penData.Clear()
+  Private Sub btnCancel_Click(ByVal sender As System.Object, ByVal e As System.EventArgs)
+        If (m_penDataOptionMode = PenDataOptionMode.PenDataOptionMode_TimeCountSequence) Then
+           Me.m_penTimeData.Clear()
+        Else
+           Me.m_penData.Clear()
+        End If
+        
         Me.DialogResult = DialogResult.Cancel
         Me.Close()
     End Sub
 
     Private Sub btnClear_Click(ByVal sender As System.Object, ByVal e As System.EventArgs)
-        If (m_penData.Count <> 0) Then
-            clearScreen()
-        End If
+      If (m_penDataOptionMode = PenDataOptionMode.PenDataOptionMode_TimeCountSequence) Then
+         clearSignature(m_penTimeData.Count, m_tablet)
+      Else
+         clearSignature(m_penData.Count, m_tablet)
+      End If
     End Sub
 
+    Private Sub clearSignature(ByVal penDataCount As Int32, ByVal tablet As wgssSTU.Tablet)
+       If (penDataCount <> 0) Then
+          clearScreen(m_tablet)
+       End If
+    End Sub
+   
     Private Sub btnOK_Click(ByVal sender As System.Object, ByVal e As System.EventArgs)
-        If (m_penData.Count > 0) Then
-            Me.DialogResult = DialogResult.OK
-            Me.Close()
-        End If
+      If (m_penDataOptionMode = PenDataOptionMode.PenDataOptionMode_TimeCountSequence) Then
+         closeProgramOK(m_penTimeData.Count)
+      Else
+         closeProgramOK(m_penData.Count)
+      End If
     End Sub
 
+    Private Sub closeProgramOK(ByVal penDataCount As Int32)
+       If (penDataCount > 0) Then
+          Me.DialogResult = DialogResult.OK
+          Me.Close()
+       Else
+          MessageBox.Show("No signature provided")
+       End If
+    End Sub
+   
     Private Sub SignatureForm_MouseClick(ByVal sender As System.Object, ByVal e As System.Windows.Forms.MouseEventArgs) Handles MyBase.MouseClick
         ' Enable the mouse to click on the simulated buttons that we have displayed.
 
@@ -305,7 +441,11 @@ Public Class SignatureForm
         ' Ensure that you correctly disconnect from the tablet, otherwise you are 
         ' likely to get errors when wanting to connect a second time.
         If (m_tablet IsNot Nothing) Then
-            RemoveHandler m_tablet.onPenData, New wgssSTU.ITabletEvents2_onPenDataEventHandler(AddressOf onPenData)
+            If m_penDataOptionMode = PenDataOptionMode.PenDataOptionMode_TimeCountSequence Then
+               RemoveHandler m_tablet.onPenData, New wgssSTU.ITabletEvents2_onPenDataEventHandler(AddressOf  onPenDataTimeCountSequence)
+            Else
+               RemoveHandler m_tablet.onPenData, New wgssSTU.ITabletEvents2_onPenDataEventHandler(AddressOf onPenData)
+            End If
             RemoveHandler m_tablet.onGetReportException, New wgssSTU.ITabletEvents2_onGetReportExceptionEventHandler(AddressOf onGetReportException)
 
             m_tablet.setInkingMode(&H0)
@@ -413,35 +553,170 @@ Public Class SignatureForm
         End If
     End Sub
 
-    Private Sub SignatureForm_Paint(ByVal sender As System.Object, ByVal e As System.Windows.Forms.PaintEventArgs) Handles MyBase.Paint
-        If (m_penData.Count <> 0) Then
-            ' Redraw all the pen data up until now!
+   Private Sub onPenDataTimeCountSequence(ByVal penTimeData As wgssSTU.IPenDataTimeCountSequence) ' Process incoming pen data
+        Dim penSequence As UInt16
+        Dim penTimeStamp As UInt16
+        Dim penPressure As UInt16
+        Dim x As UInt16
+        Dim y As UInt16
 
-            Dim gfx = e.Graphics
-            gfx.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality
-            gfx.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.High
-            gfx.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality
-            gfx.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality
-            Dim isDown = False
-            Dim prev = New PointF()
-            For i As Integer = 0 To (m_penData.Count - 1)
-                If (m_penData(i).sw <> 0) Then
-                    If (Not isDown) Then
-                        isDown = True
-                        prev = tabletToClient(m_penData(i))
-                    Else
-                        Dim curr = tabletToClient(m_penData(i))
-                        gfx.DrawLine(m_penInk, prev, curr)
-                        prev = curr
-                    End If
-                Else
-                    If (isDown) Then
-                        isDown = False
-                    End If
-                End If
-            Next
+        penPressure = penTimeData.pressure
+        penTimeStamp = penTimeData.timeCount
+        penSequence = penTimeData.sequence
+        x = penTimeData.x
+        y = penTimeData.y
+
+        Dim pt = tabletToScreen(penTimeData)
+
+        Dim btn = 0 ' will be +ve if the pen is over a button.
+
+        For i As Integer = 0 To (m_btns.Length - 1)
+           If (m_btns(i).Bounds.Contains(pt)) Then
+              btn = i + 1
+              Exit For
+           End If
+        Next
+
+
+        Dim isDown = (penTimeData.sw <> 0)
+
+        ' This code uses a model of four states the pen can be in:
+        ' down or up, and whether this is the first sample of that state.
+
+        If (isDown) Then
+
+           If (m_isDown = 0) Then
+
+              ' transition to down
+              If (btn > 0) Then
+                 ' We have put the pen down on a button.
+                 ' Track the pen without inking on the client.
+                 m_isDown = btn
+              Else
+                 ' We have put the pen down somewhere else.
+                 ' Treat it as part of the signature.
+                 m_isDown = -1
+              End If
+           Else
+              ' already down, keep doing what we're doing!
+           End If
+
+           ' draw
+           If (m_penTimeData.Count <> 0 And m_isDown = -1) Then
+
+              ' Draw a line from the previous down point to this down point.
+              ' This is the simplist thing you can do; a more sophisticated program
+              ' can perform higher quality rendering than this!
+
+              Dim gfx = Me.CreateGraphics()
+              gfx.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality
+              gfx.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.High
+              gfx.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality
+              gfx.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality
+
+              Dim prevPenData = m_penTimeData(m_penTimeData.Count - 1)
+
+              Dim prev = tabletToClientTimed(prevPenData)
+
+              gfx.DrawLine(m_penInk, prev, tabletToClientTimed(penTimeData))
+              gfx.Dispose()
+           End If
+
+           ' The pen is down, store it for use later.
+           If (m_isDown = -1) Then
+              m_penTimeData.Add(penTimeData)
+           End If
+        Else
+           If (m_isDown <> 0) Then
+              ' transition to up
+              If (btn > 0) Then
+                 ' The pen is over a button
+                 If (btn = m_isDown) Then
+                    ' The pen was pressed down over the same button as is was lifted now. 
+                    ' Consider that as a click!
+                    m_btns(btn - 1).PerformClick()
+                 End If
+              End If
+              m_isDown = 0
+           Else
+              ' still up
+           End If
+
+           ' Add up data once we have collected some down data.
+           If (m_penTimeData.Count <> 0) Then
+              m_penTimeData.Add(penTimeData)
+           End If
         End If
-    End Sub
+     End Sub
+
+  Private Sub SignatureForm_Paint(ByVal sender As System.Object, ByVal e As System.Windows.Forms.PaintEventArgs) Handles MyBase.Paint
+    ' Redraw all the pen data up until now!
+
+    If m_penDataOptionMode = PenDataOptionMode.PenDataOptionMode_TimeCountSequence Then
+      RenderPenTimeData(e)
+    Else
+      RenderPenData(e)
+    End If
+  End Sub
+
+  Private Sub RenderPenData(ByVal e As System.Windows.Forms.PaintEventArgs)
+
+      If (m_penData.Count <> 0) Then
+         Dim gfx = e.Graphics
+         gfx.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality
+         gfx.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.High
+         gfx.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality
+         gfx.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality
+         Dim isDown = False
+         Dim prev = New PointF()
+         For i As Integer = 0 To (m_penData.Count - 1)
+            If (m_penData(i).sw <> 0) Then
+               If (Not isDown) Then
+                  isDown = True
+                  prev = tabletToClient(m_penData(i))
+               Else
+                  Dim curr = tabletToClient(m_penData(i))
+                  gfx.DrawLine(m_penInk, prev, curr)
+                  prev = curr
+               End If
+            Else
+               If (isDown) Then
+                  isDown = False
+               End If
+            End If
+         Next
+      End If
+   End Sub
+
+   Private Sub RenderPenTimeData(ByVal e As System.Windows.Forms.PaintEventArgs)
+
+      If (m_penTimeData.Count <> 0) Then
+         Dim gfx = e.Graphics
+         gfx.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality
+         gfx.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.High
+         gfx.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality
+         gfx.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality
+         Dim isDown = False
+         Dim prev = New PointF()
+         For i As Integer = 0 To (m_penTimeData.Count - 1)
+            If (m_penTimeData(i).sw <> 0) Then
+               If (Not isDown) Then
+                  isDown = True
+                  prev = tabletToClientTimed(m_penTimeData(i))
+               Else
+                  Dim curr = tabletToClientTimed(m_penTimeData(i))
+                  gfx.DrawLine(m_penInk, prev, curr)
+                  prev = curr
+               End If
+            Else
+               If (isDown) Then
+                  isDown = False
+               End If
+            End If
+         Next
+      End If
+   End Sub
+   
     Public Function GetSigImage()
         Dim bitmap As Bitmap
         Dim brush As SolidBrush
