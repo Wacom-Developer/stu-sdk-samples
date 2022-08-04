@@ -6,42 +6,6 @@ The Java samples are also used by Linux and additional build tools and scripts a
 
 ## Overview
 
-### HTML
-
-Internet Explorer demo project (IE9 or above is required for canvas support).
-Other browsers are not supported - please see the SigCaptX samples instead.
-The HTML samples rely on the use of ActiveX which, for security reasons, is not supported on current browsers.
-However the legacy Internet Explorer product is usually included in a Windows installation and can be used as a convenient platform to explore the SDK.
-
-
-**DemoButtons**
-
-    DemoButtons.html    - The sample demonstrates a signature capture application.
-                          The demo displays a signature capture window with buttons on the PC and the tablet display:
-                            OK     - accepts the signature
-                            Clear  - clears the display
-                            Cancel - cancels signature capture
-                            
-                          The sample generates the tablet display image dynamically.
-                          Encryption handlers are included. 
-
-**demoTandC**
-
-    demoTandC.html    - The sample demonstrates a signature capture application from a colour STU such as the 530 or 540.
-                          The demo displays a signature capture window with buttons on the PC and the tablet display:
-                            OK     - accepts the signature
-                            Clear  - clears the display
-                            Cancel - cancels signature capture
-                            
-                          The sample generates the tablet display from predefined images (PNG files).
-                          Encryption handlers are included.
-
-
-**SendToSTU**
-
-    SendToSTU.html      - The sample demonstrates sending an image file to the STU display
-    SendToSTU-Area.html - The sample demonstrates updating an area of the STU-530 display
-
 ### Java
 
 Java demo projects

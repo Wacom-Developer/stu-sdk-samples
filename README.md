@@ -34,7 +34,7 @@ You can:
 The SDK is written in C++11 and the source code is provided. However there are no limitations if you program in a different language.
 C and Java language bindings (Java relies upon JNI) are available with virtually all the same functionality as the core C++.
 This is supported on Windows and Linux platforms.
-On Windows, there is also a COM library which provides support for any ActiveX-capable language such as .NET Framework (C#), Delphi, and HTML (JavaScript) from within Internet Explorer. 
+On Windows, there is also a COM library which provides support for any ActiveX-capable language such as .NET Framework (C#) and Delphi. 
 
 ##	Which language to use 
 
@@ -69,15 +69,6 @@ Although this is a supported language, we would not typically recommend using th
 ####	COM (ActiveX) 
 Support is available on Windows. The binary library can be registered (using regsvr32.exe) or used without registration with an SxS (side-by-side) manifest (especially if developing a new application). 
 Registration is required for use with Internet Explorer and during the development of .NET applications (when using Visual Studio), but are not necessary for application execution if deployed with a suitable manifest. 
-
-####	HTML (JavaScript)
-
-COM/ActiveX support is limited to Internet Explorer where support is further limited to version 10 and below.
-An alternative solution has been developed for browser support: **STU-SigCaptX**.
-
-STU-SigCaptX is included in the STU-SDK as a separate installer.
-The installation creates a local service and server for use with web based applications.
-The package gives HTML Javascript indirect access to the functions in the Windows binary library **wgssSTU.dll**.
 
 ## Overview 
 As far as possible, in each language the classes, interfaces and methods are named identically.
