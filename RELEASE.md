@@ -1,8 +1,11 @@
 # STU SDK
 
-## Version 2.15.4
+## Version 2.15.5
 
 ## History
+
+###   Release 2.15.5   29-May-2020
+    * Rebuilt zip file
 
 ###   Release 2.15.4   21-Apr-2020
     * Samples removed from Windows installer
