@@ -13,7 +13,6 @@ The samples included here are primarily for Windows.
 | DemoButtons_SpeedCalc           | Version of Demobuttons which calculates the average speed of the pen when signing                              |
 | DemoButtons_UpsideDown          | Version of DemoButtons which inverts the capture screen display so that the STU can be reversed in orientation |
 | DemoButtonsHIDSerial            | Version of DemoButtons allowing user to swap between HID and serial capture                                    |
-| DemoButtons-usingEncryption     | Version of DemoButtons using encrypted pen data                                                                |
 | DemoButtons-usingInkState       | Version of DemoButtons demonstrating how to use InkingState with pen pressure thresholds                       |
 | SaveImage                       | Version of DemoButtons allowing user to save the signature image in JPEG, PNG, GIFF or BMP format              |
 | SendToSTU                       | Enable user to select an image and send it to the STU                                                          |

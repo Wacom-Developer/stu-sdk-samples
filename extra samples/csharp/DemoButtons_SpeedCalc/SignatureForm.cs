@@ -3,9 +3,11 @@
  SignatureForm.cs
 
  Allows user to input a signature on an STU and reproduces it on a Window on the PC.
- Signature can also be saved to disk as a JPEG image
+ On clicking the OK button the average speed of the pen is displayed in pixels per millisecond, metres per second and kilometres per hour.
 
- Copyright (c) 2015 Wacom GmbH. All rights reserved.
+ This sample only works with the STU-430, STU-530 and STU-540
+
+ Copyright (c) 2023 Wacom Ltd. All rights reserved.
 
 */
 // Notes:

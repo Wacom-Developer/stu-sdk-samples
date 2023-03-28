@@ -34,21 +34,21 @@
     /// </summary>
     private void InitializeComponent()
     {
-      this.SuspendLayout();
-      // 
-      // SignatureForm
-      // 
-      this.ClientSize = new System.Drawing.Size(284, 261);
-      this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
-      this.MaximizeBox = false;
-      this.MinimizeBox = false;
-      this.Name = "SignatureForm";
-      this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-      this.Text = "Signature";
-      this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.Form2_FormClosed);
-      this.Paint += new System.Windows.Forms.PaintEventHandler(this.Form2_Paint);
-      this.MouseClick += new System.Windows.Forms.MouseEventHandler(this.Form2_MouseClick);
-      this.ResumeLayout(false);
+        this.SuspendLayout();
+        // 
+        // SignatureForm
+        // 
+        this.ClientSize = new System.Drawing.Size(284, 261);
+        this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
+        this.MaximizeBox = false;
+        this.MinimizeBox = false;
+        this.Name = "SignatureForm";
+        this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
+        this.Text = "Signature Capture";
+        this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.Form2_FormClosed);
+        this.Paint += new System.Windows.Forms.PaintEventHandler(this.Form2_Paint);
+        this.MouseClick += new System.Windows.Forms.MouseEventHandler(this.Form2_MouseClick);
+        this.ResumeLayout(false);
 
     }
 

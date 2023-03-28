@@ -716,51 +716,67 @@ Public Class SignatureForm
          Next
       End If
    End Sub
-   
-    Public Function GetSigImage()
-        Dim bitmap As Bitmap
-        Dim brush As SolidBrush
-        Dim rect As Rectangle
-        Dim p1, p2 As Point
 
-        rect.X = rect.Y = 0
-        rect.Width = m_capability.screenWidth
-        rect.Height = m_capability.screenHeight
+  Public Function GetSigImage()
 
-        Try
-            bitmap = New Bitmap(rect.Width, rect.Height)
-            Dim gfx = Graphics.FromImage(bitmap)
-            Dim s = Me.AutoScaleDimensions
-            '            Dim inkWidthMM = 0.7F
-            Dim inkWidthMM = 1.0F
-            m_penInk = New Pen(Color.DarkBlue, inkWidthMM / 25.4F * ((s.Width + s.Height) / 2.0F))
-            m_penInk.StartCap = m_penInk.EndCap = System.Drawing.Drawing2D.LineCap.Round
-            m_penInk.LineJoin = System.Drawing.Drawing2D.LineJoin.Round
+    Dim bitmap As Bitmap
+    Dim brush As SolidBrush
+    Dim rect As Rectangle
+    Dim p1, p2 As Point
 
-            gfx.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality
-            gfx.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.High
-            gfx.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality
-            gfx.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality
+    rect.X = rect.Y = 0
+    rect.Width = m_capability.screenWidth
+    rect.Height = m_capability.screenHeight
 
-            brush = New SolidBrush(Color.White)
-            gfx.FillRectangle(brush, 0, 0, rect.Width, rect.Height)
+    Try
+      bitmap = New Bitmap(rect.Width, rect.Height)
+      Dim gfx = Graphics.FromImage(bitmap)
+      Dim s = Me.AutoScaleDimensions
+      '            Dim inkWidthMM = 0.7F
+      Dim inkWidthMM = 1.0F
+      m_penInk = New Pen(Color.DarkBlue, inkWidthMM / 25.4F * ((s.Width + s.Height) / 2.0F))
+      m_penInk.StartCap = m_penInk.EndCap = System.Drawing.Drawing2D.LineCap.Round
+      m_penInk.LineJoin = System.Drawing.Drawing2D.LineJoin.Round
 
-            For i As Integer = 1 To (m_penData.Count - 1)
-                p1 = tabletToScreen(m_penData(i - 1))
-                p2 = tabletToScreen(m_penData(i))
+      gfx.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality
+      gfx.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.High
+      gfx.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality
+      gfx.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality
 
-                If (m_penData(i - 1).sw > 0 Or m_penData(i).sw > 0) Then
-                    gfx.DrawLine(m_penInk, p1, p2)
-                End If
-            Next
-        Catch ex As Exception
-            print("Exception: " + ex.Message)
-            MsgBox("Exception: " + ex.Message)
-            bitmap = Nothing
-        End Try
-        Return bitmap
-    End Function
-    Private Sub print(ByVal txt As String)
+      brush = New SolidBrush(Color.White)
+      gfx.FillRectangle(brush, 0, 0, rect.Width, rect.Height)
+
+      If m_penDataOptionMode = PenDataOptionMode.PenDataOptionMode_TimeCountSequence Then
+        For i As Integer = 1 To (m_penTimeData.Count - 1)
+          p1 = tabletToScreen(m_penTimeData(i - 1))
+          p2 = tabletToScreen(m_penTimeData(i))
+
+          If (m_penTimeData(i - 1).sw > 0 Or m_penTimeData(i).sw > 0) Then
+            gfx.DrawLine(m_penInk, p1, p2)
+          End If
+        Next
+      Else
+        For i As Integer = 1 To (m_penData.Count - 1)
+          p1 = tabletToScreen(m_penData(i - 1))
+          p2 = tabletToScreen(m_penData(i))
+
+          If (m_penData(i - 1).sw > 0 Or m_penData(i).sw > 0) Then
+            gfx.DrawLine(m_penInk, p1, p2)
+          End If
+        Next
+      End If
+
+    Catch ex As Exception
+      print("Exception: " + ex.Message)
+      MsgBox("Exception: " + ex.Message)
+      bitmap = Nothing
+    End Try
+
+    Return bitmap
+
+  End Function
+
+  Private Sub print(ByVal txt As String)
         m_ParentForm.print(txt)
     End Sub
 End Class

@@ -6,6 +6,14 @@ using System.Drawing;
 using System.Text;
 using System.Windows.Forms;
 
+enum PenDataOptionMode
+{
+  PenDataOptionMode_None,
+  PenDataOptionMode_TimeCount,
+  PenDataOptionMode_SequenceNumber,
+  PenDataOptionMode_TimeCountSequence
+};
+
 namespace DemoButtons
 {
   public partial class DemoButtonsForm : Form

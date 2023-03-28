@@ -2,8 +2,13 @@
  SignatureForm.cs
 
  Allows user to input a signature on an STU and reproduces it on a Window on the PC
+ The user can choose between HID and serial input from the signature pad.
 
- Copyright (c) 2015 Wacom GmbH. All rights reserved.
+ HID mode works with the STU-300, STU-430, STU-500, STU-530 and STU-540.
+ Serial mode works satisfactorily with the STU-430V (no longer manufactured)
+ but not with the STU-540 in serial mode because it's too slow
+
+ Copyright (c) 2023 Wacom Ltd. All rights reserved.
 
 */
 // Notes:

@@ -3,9 +3,12 @@
   SignatureForm.cs
   
   Display signature capture form on STU pad and on Windows
-  with OK, Clear and Cancel buttons
+  with OK, Clear and Cancel buttons. After capturing the signature
+  displays it on the main form as an image.
+
+  Compatible with STU-300, STU-430, STU-500, STU-530 and STU-540
   
-  Copyright (c) 2015 Wacom GmbH. All rights reserved.
+  Copyright (c) 2023 Wacom Ltd. All rights reserved.
   
 ********************************************************/
 // Notes:
@@ -26,6 +29,7 @@ namespace DemoButtons
 {
   public partial class SignatureForm : Form
   {
+    public int penDataType;
     private wgssSTU.Tablet       m_tablet;
     private wgssSTU.ICapability  m_capability;
     private wgssSTU.IInformation m_information;
@@ -55,12 +59,14 @@ namespace DemoButtons
     private int m_isDown;
 
     private List<wgssSTU.IPenData> m_penData; // Array of data being stored. This can be subsequently used as desired.
+    private List<wgssSTU.IPenDataTimeCountSequence> m_penTimeData; // Array of data being stored. This can be subsequently used as desired.
 
     private Button[] m_btns; // The array of buttons that we are emulating.
 
     private Bitmap m_bitmap; // The bitmap that we display on the screen.
     private wgssSTU.encodingMode m_encodingMode; // How we send the bitmap to the device.
     private byte[] m_bitmapData; // This is the flattened data of the bitmap that we send to the device.
+    private int m_penDataOptionMode;  // The pen data option mode flag - basic or with time and sequence counts
 
     // As per the file comment, there are three coordinate systems to deal with.
     // To help understand, we have left the calculations in place rather than optimise them.
@@ -73,7 +79,11 @@ namespace DemoButtons
       return new PointF((float)penData.x * this.ClientSize.Width / m_capability.tabletMaxX, (float)penData.y * this.ClientSize.Height / m_capability.tabletMaxY);
     }
 
-
+    private PointF tabletToClientTimed(wgssSTU.IPenDataTimeCountSequence penData)
+    {
+      // Client means the Windows Form coordinates.
+      return new PointF((float)penData.x * this.ClientSize.Width / m_capability.tabletMaxX, (float)penData.y * this.ClientSize.Height / m_capability.tabletMaxY);
+    }
 
     private Point tabletToScreen(wgssSTU.IPenData penData)
     {
@@ -97,7 +107,15 @@ namespace DemoButtons
       // note: There is no need to clear the tablet screen prior to writing an image.
       m_tablet.writeImage((byte)m_encodingMode, m_bitmapData);
 
-      m_penData.Clear();
+      if (m_penDataOptionMode == (int)PenDataOptionMode.PenDataOptionMode_TimeCountSequence)
+      {
+        m_penTimeData.Clear();
+      }
+      else
+      {
+        m_penData.Clear();
+      }
+
       m_isDown = 0;
       this.Invalidate();
     }
@@ -106,17 +124,39 @@ namespace DemoButtons
     private void btnOk_Click(object sender, EventArgs e)
     {
       // You probably want to add additional processing here.
-              if (m_penData.Count > 0) {
-                  this.DialogResult = DialogResult.OK;
-                  this.Close();
-              }
+      penDataType = m_penDataOptionMode;
+
+      if (m_penDataOptionMode == (int)PenDataOptionMode.PenDataOptionMode_TimeCountSequence)
+      {
+        if (m_penTimeData.Count > 0)
+        {
+          this.DialogResult = DialogResult.OK;
+          this.Close();
+        }
+      }
+      else
+      {
+        if (m_penData.Count > 0)
+        {
+          this.DialogResult = DialogResult.OK;
+          this.Close();
+        }
+      }
     }
 
 
     private void btnCancel_Click(object sender, EventArgs e)
     {
       // You probably want to add additional processing here.
-      m_penData.Clear();
+      if (m_penDataOptionMode == (int)PenDataOptionMode.PenDataOptionMode_TimeCountSequence)
+      {
+        this.m_penTimeData = null;
+      }
+      else
+      {
+        this.m_penData = null;
+      }
+
       this.DialogResult = DialogResult.Cancel;
       this.Close();
     }
@@ -124,19 +164,31 @@ namespace DemoButtons
     
     private void btnClear_Click(object sender, EventArgs e)
     {
-      if (m_penData.Count != 0)
+      if (m_penData.Count != 0 || m_penTimeData.Count != 0)
       {
         clearScreen();
       }
     }
 
-    
+    private Graphics setQualityGraphics(Form thisForm)
+    {
+      Graphics gfx = thisForm.CreateGraphics();
+      gfx.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+      gfx.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.High;
+      gfx.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+      gfx.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
 
+      return gfx;
+    }
 
     // Pass in the device you want to connect to!
     public SignatureForm(DemoButtonsForm parent, wgssSTU.IUsbDevice usbDevice)
     {
-        m_parent = parent;
+      int currentPenDataOptionMode;
+
+      m_penDataOptionMode = -1;
+
+      m_parent = parent;
       // This is a DPI aware application, so ensure you understand how .NET client coordinates work.
       // Testing using a Windows installation set to a high DPI is recommended to understand how
       // values get scaled or not.
@@ -162,6 +214,12 @@ namespace DemoButtons
         m_capability = m_tablet.getCapability();
         m_information = m_tablet.getInformation();
         print("Connected: " + m_information.modelName);
+
+        // First find out if the pad supports the pen data option mode (the 300 doesn't)
+        currentPenDataOptionMode = getPenDataOptionMode();
+
+        // Set up the tablet to return time stamp with the pen data or just basic data
+        setPenDataOptionMode(currentPenDataOptionMode);
       }
       else
       {
@@ -325,11 +383,7 @@ namespace DemoButtons
       m_penInk.StartCap = m_penInk.EndCap = System.Drawing.Drawing2D.LineCap.Round;
       m_penInk.LineJoin = System.Drawing.Drawing2D.LineJoin.Round;
 
-      
-      // Add the delagate that receives pen data.
-      m_tablet.onPenData += new wgssSTU.ITabletEvents2_onPenDataEventHandler(onPenData);
-      m_tablet.onGetReportException += new wgssSTU.ITabletEvents2_onGetReportExceptionEventHandler(onGetReportException);
-
+      addDelegates();
 
       // Initialize the screen
       clearScreen();
@@ -338,6 +392,109 @@ namespace DemoButtons
       m_tablet.setInkingMode(0x01);
     }
 
+    private int getPenDataOptionMode()
+    {
+      int penDataOptionMode;
+
+      try
+      {
+        penDataOptionMode = m_tablet.getPenDataOptionMode();
+      }
+      catch (Exception optionModeException)
+      {
+        //m_parent.print("Tablet doesn't support getPenDataOptionMode");
+        penDataOptionMode = -1;
+      }
+      //m_parent.print("Pen data option mode: " + m_penDataOptionMode);
+
+      return penDataOptionMode;
+    }
+
+    private void setPenDataOptionMode(int currentPenDataOptionMode)
+    {
+      // If the current option mode is TimeCount then this is a 520 so we must reset the mode
+      // to basic data only as there is no handler for TimeCount
+
+      //m_parent.print("current mode: " + currentPenDataOptionMode);
+
+      switch (currentPenDataOptionMode)
+      {
+        case -1:
+          // THis must be the 300 which doesn't support getPenDataOptionMode at all so only basic data
+          m_penDataOptionMode = (int)PenDataOptionMode.PenDataOptionMode_None;
+          break;
+
+        case (int)PenDataOptionMode.PenDataOptionMode_None:
+          // If the current option mode is "none" then it could be any pad so try setting the full option
+          // and if it fails or ends up as TimeCount then set it to none
+          try
+          {
+            m_tablet.setPenDataOptionMode((byte)wgssSTU.penDataOptionMode.PenDataOptionMode_TimeCountSequence);
+            m_penDataOptionMode = m_tablet.getPenDataOptionMode();
+            if (m_penDataOptionMode == (int)PenDataOptionMode.PenDataOptionMode_TimeCount)
+            {
+              m_tablet.setPenDataOptionMode((byte)wgssSTU.penDataOptionMode.PenDataOptionMode_None);
+              m_penDataOptionMode = (int)PenDataOptionMode.PenDataOptionMode_None;
+            }
+            else
+            {
+              m_penDataOptionMode = (int)PenDataOptionMode.PenDataOptionMode_TimeCountSequence;
+            }
+          }
+          catch (Exception ex)
+          {
+            // THis shouldn't happen but just in case...
+            //m_parent.print("Using basic pen data");
+            m_penDataOptionMode = (int)PenDataOptionMode.PenDataOptionMode_None;
+          }
+          break;
+
+        case (int)PenDataOptionMode.PenDataOptionMode_TimeCount:
+          m_tablet.setPenDataOptionMode((byte)wgssSTU.penDataOptionMode.PenDataOptionMode_None);
+          m_penDataOptionMode = (int)PenDataOptionMode.PenDataOptionMode_None;
+          break;
+
+        case (int)PenDataOptionMode.PenDataOptionMode_TimeCountSequence:
+          // If the current mode is timecountsequence then leave it at that
+          m_penDataOptionMode = currentPenDataOptionMode;
+          break;
+      }
+
+      switch ((int)m_penDataOptionMode)
+      {
+        case (int)PenDataOptionMode.PenDataOptionMode_None:
+          m_penData = new List<wgssSTU.IPenData>();
+          //m_parent.print("None");
+          break;
+        case (int)PenDataOptionMode.PenDataOptionMode_TimeCount:
+          m_penData = new List<wgssSTU.IPenData>();
+          //m_parent.print("Time count");
+          break;
+        case (int)PenDataOptionMode.PenDataOptionMode_SequenceNumber:
+          m_penData = new List<wgssSTU.IPenData>();
+          //m_parent.print("Seq number");
+          break;
+        case (int)PenDataOptionMode.PenDataOptionMode_TimeCountSequence:
+          m_penTimeData = new List<wgssSTU.IPenDataTimeCountSequence>();
+          //m_parent.print("Time count + seq");
+          break;
+        default:
+          m_penData = new List<wgssSTU.IPenData>();
+          break;
+      }
+    }
+
+    private void addDelegates()
+    {
+      // Add the delegates that receive pen data.
+      m_tablet.onGetReportException += new wgssSTU.ITabletEvents2_onGetReportExceptionEventHandler(onGetReportException);
+
+      m_tablet.onPenData += new wgssSTU.ITabletEvents2_onPenDataEventHandler(onPenData);
+      m_tablet.onPenDataEncrypted += new wgssSTU.ITabletEvents2_onPenDataEncryptedEventHandler(onPenDataEncrypted);
+
+      m_tablet.onPenDataTimeCountSequence += new wgssSTU.ITabletEvents2_onPenDataTimeCountSequenceEventHandler(onPenDataTimeCountSequence);
+      m_tablet.onPenDataTimeCountSequenceEncrypted += new wgssSTU.ITabletEvents2_onPenDataTimeCountSequenceEncryptedEventHandler(onPenDataTimeCountSequenceEncrypted);
+    }
 
 
     private void Form2_FormClosed(object sender, FormClosedEventArgs e)
@@ -346,9 +503,17 @@ namespace DemoButtons
       // likely to get errors when wanting to connect a second time.
       if (m_tablet != null)
       {
-        m_tablet.onPenData -= new wgssSTU.ITabletEvents2_onPenDataEventHandler(onPenData);
         m_tablet.onGetReportException -= new wgssSTU.ITabletEvents2_onGetReportExceptionEventHandler(onGetReportException);
-        
+
+        m_tablet.onPenData -= new wgssSTU.ITabletEvents2_onPenDataEventHandler(onPenData);
+        m_tablet.onPenDataEncrypted -= new wgssSTU.ITabletEvents2_onPenDataEncryptedEventHandler(onPenDataEncrypted);
+
+        m_tablet.onPenDataTimeCountSequence -= new wgssSTU.ITabletEvents2_onPenDataTimeCountSequenceEventHandler(onPenDataTimeCountSequence);
+        m_tablet.onPenDataTimeCountSequenceEncrypted -= new wgssSTU.ITabletEvents2_onPenDataTimeCountSequenceEncryptedEventHandler(onPenDataTimeCountSequenceEncrypted);
+
+
+        m_tablet.onGetReportException -= new wgssSTU.ITabletEvents2_onGetReportExceptionEventHandler(onGetReportException);
+
         m_tablet.setInkingMode(0x00);
         m_tablet.setClearScreen();
         m_tablet.disconnect();
@@ -369,8 +534,122 @@ namespace DemoButtons
         m_tablet.disconnect();
         m_tablet = null;
         m_penData = null;
+        m_penTimeData = null;
         this.Close();
       }
+    }
+
+    private void onPenDataTimeCountSequenceEncrypted(wgssSTU.IPenDataTimeCountSequenceEncrypted penTimeCountSequenceDataEncrypted) // Process incoming pen data
+    {
+      onPenDataTimeCountSequence(penTimeCountSequenceDataEncrypted);
+      //onPenDataTimeCountSequence(penTimeCountSequenceDataEncrypted);
+    }
+
+    private void onPenDataTimeCountSequence(wgssSTU.IPenDataTimeCountSequence penTimeData)
+    {
+      UInt16 penSequence;
+      UInt16 penTimeStamp;
+      UInt16 penPressure;
+      UInt16 x;
+      UInt16 y;
+
+      penPressure = penTimeData.pressure;
+      penTimeStamp = penTimeData.timeCount;
+      penSequence = penTimeData.sequence;
+      x = penTimeData.x;
+      y = penTimeData.y;
+
+      Point pt = tabletToScreen(penTimeData);
+      int btn = buttonClicked(pt); // Check if a button was clicked
+
+      bool isDown = (penTimeData.sw != 0);
+
+      //m_parent.print("Handling pen data timed");
+
+      // This code uses a model of four states the pen can be in:
+      // down or up, and whether this is the first sample of that state.
+
+      if (isDown)
+      {
+        if (m_isDown == 0)
+        {
+          // transition to down
+          if (btn > 0)
+          {
+            // We have put the pen down on a button.
+            // Track the pen without inking on the client.
+
+            m_isDown = btn;
+          }
+          else
+          {
+            // We have put the pen down somewhere else.
+            // Treat it as part of the signature.
+
+            m_isDown = -1;
+          }
+        }
+        else
+        {
+          // already down, keep doing what we're doing!
+        }
+
+        // draw
+        if (m_penTimeData.Count != 0 && m_isDown == -1)
+        {
+          // Draw a line from the previous down point to this down point.
+          // This is the simplist thing you can do; a more sophisticated program
+          // can perform higher quality rendering than this!
+
+          Graphics gfx = setQualityGraphics(this);
+          wgssSTU.IPenDataTimeCountSequence prevPenData = m_penTimeData[m_penTimeData.Count - 1];
+          PointF prev = tabletToClient(prevPenData);
+
+          gfx.DrawLine(m_penInk, prev, tabletToClientTimed(penTimeData));
+          gfx.Dispose();
+        }
+
+        // The pen is down, store it for use later.
+        if (m_isDown == -1)
+          m_penTimeData.Add(penTimeData);
+      }
+      else
+      {
+        if (m_isDown != 0)
+        {
+          // transition to up
+          if (btn > 0)
+          {
+            // The pen is over a button
+
+            if (btn == m_isDown)
+            {
+              // The pen was pressed down over the same button as is was lifted now. 
+              // Consider that as a click!
+              //m_parent.print("Performing button " + btn);
+              m_btns[btn - 1].PerformClick();
+            }
+          }
+          m_isDown = 0;
+        }
+        else
+        {
+          // still up
+        }
+
+        // Add up data once we have collected some down data.
+        if (m_penTimeData != null)
+        {
+          if (m_penTimeData.Count != 0)
+            m_penTimeData.Add(penTimeData);
+        }
+      }
+    }
+
+    private void onPenDataEncrypted(wgssSTU.IPenDataEncrypted penData) // Process incoming pen data
+    {
+      onPenData(penData.penData1);
+      onPenData(penData.penData2);
     }
 
     private void onPenData(wgssSTU.IPenData penData) // Process incoming pen data
@@ -473,10 +752,39 @@ namespace DemoButtons
       }
     }
 
-       
-
+    private int buttonClicked(Point pt)
+    {
+      int btn = 0; // will be +ve if the pen is over a button.
+      {
+        for (int i = 0; i < m_btns.Length; ++i)
+        {
+          if (m_btns[i].Bounds.Contains(pt))
+          {
+            btn = i + 1;
+            //m_parent.print("Pressed button " + btn);
+            break;
+          }
+        }
+      }
+      return btn;
+    }
 
     private void Form2_Paint(object sender, PaintEventArgs e)
+    {
+      // Call the appropriate routine to render the pen strokes on the client window
+      // depending on what type of pen data is being received
+
+      if (m_penDataOptionMode == (int)PenDataOptionMode.PenDataOptionMode_TimeCountSequence)
+      {
+        renderPenTimeData(e);
+      }
+      else
+      {
+        renderPenData(e);
+      }
+    }
+
+    private void renderPenData(PaintEventArgs e)
     {
       if (m_penData.Count != 0)
       {
@@ -514,8 +822,47 @@ namespace DemoButtons
           }
         }
       }
-          
     }
+    private void renderPenTimeData(PaintEventArgs e)
+    {
+      if (m_penTimeData.Count != 0)
+      {
+        // Redraw all the pen data up until now!
+
+        Graphics gfx = e.Graphics;
+        gfx.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+        gfx.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.High;
+        gfx.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+        gfx.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+        bool isDown = false;
+        PointF prev = new PointF();
+        for (int i = 0; i < m_penTimeData.Count; ++i)
+        {
+          if (m_penTimeData[i].sw != 0)
+          {
+            if (!isDown)
+            {
+              isDown = true;
+              prev = tabletToClientTimed(m_penTimeData[i]);
+            }
+            else
+            {
+              PointF curr = tabletToClientTimed(m_penTimeData[i]);
+              gfx.DrawLine(m_penInk, prev, curr);
+              prev = curr;
+            }
+          }
+          else
+          {
+            if (isDown)
+            {
+              isDown = false;
+            }
+          }
+        }
+      }
+    }
+
 
     private void Form2_MouseClick(object sender, MouseEventArgs e)
     {      
@@ -547,14 +894,25 @@ namespace DemoButtons
       return m_penData;
     }
 
+    public List<wgssSTU.IPenDataTimeCountSequence> getPenTimeData()
+    {
+      return m_penTimeData;
+    }
+
     public wgssSTU.ICapability getCapability()
     {
-      return m_penData != null ? m_capability : null;
+      if (m_penDataOptionMode == (int)PenDataOptionMode.PenDataOptionMode_TimeCountSequence)
+        return m_penTimeData != null ? m_capability : null;
+      else
+        return m_penData != null ? m_capability : null;
     }
 
     public wgssSTU.IInformation getInformation()
     {
-      return m_penData != null ? m_information : null;
+      if (m_penDataOptionMode == (int)PenDataOptionMode.PenDataOptionMode_TimeCountSequence)
+        return m_penTimeData != null ? m_information : null;
+      else
+        return m_penData != null ? m_information : null;
     }
 
     public Bitmap GetSigImage() {
@@ -585,15 +943,31 @@ namespace DemoButtons
             brush = new SolidBrush(Color.White);
             gfx.FillRectangle(brush, 0, 0, rect.Width, rect.Height);
 
-            for( int i=1; i<m_penData.Count; ++i)
-            {
+            if (m_penDataOptionMode == (int)PenDataOptionMode.PenDataOptionMode_TimeCountSequence)
+				    {
+              for (int i = 1; i < m_penTimeData.Count; ++i)
+              {
+                p1 = tabletToScreen(m_penTimeData[i - 1]);
+                p2 = tabletToScreen(m_penTimeData[i]);
+
+                if (m_penTimeData[i - 1].sw > 0 || m_penTimeData[i].sw > 0)
+                {
+                  gfx.DrawLine(m_penInk, p1, p2);
+                }
+              }
+            }
+            else
+				    {
+              for (int i = 1; i < m_penData.Count; ++i)
+              {
                 p1 = tabletToScreen(m_penData[i - 1]);
                 p2 = tabletToScreen(m_penData[i]);
 
-                if (m_penData[i-1].sw > 0 || m_penData[i].sw > 0)
+                if (m_penData[i - 1].sw > 0 || m_penData[i].sw > 0)
                 {
-                    gfx.DrawLine(m_penInk, p1, p2);
+                  gfx.DrawLine(m_penInk, p1, p2);
                 }
+              }
             }
         }
         catch (Exception ex)
