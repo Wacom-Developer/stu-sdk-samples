@@ -30,11 +30,22 @@ namespace DemoButtons
     {
         public DemoButtonsForm()
         {
+            string STU_ModelName;
+
             InitializeComponent();
+            STU_ModelName = TabletLib.STU_Tablet.FindSTUModelName();
+            txtSTUModel.Text = STU_ModelName;
+
+            if (STU_ModelName == "STU-500" || STU_ModelName == "STU-300")
+              chkCalcSpeed.Enabled = false;
+
+            if (STU_ModelName == "STU-300")
+              chkReverseImage.Enabled = false;
         }
 
         private void btnSign_Click(object sender, EventArgs e)
         {
+
             wgssSTU.UsbDevices usbDevices = new wgssSTU.UsbDevices();
             if (usbDevices.Count != 0)
             {
@@ -42,11 +53,19 @@ namespace DemoButtons
                 {
                     wgssSTU.IUsbDevice usbDevice = usbDevices[0]; // select a device
 
-                    SignatureForm demo = new SignatureForm(this, usbDevice);
+                    SignatureForm demo = new SignatureForm(this, usbDevice, chkSaveImage.Checked, chkCalcSpeed.Checked, chkReverseImage.Checked);
                     DialogResult res = demo.ShowDialog();
                     print("SignatureForm returned: " + res.ToString());
                     if (res == DialogResult.OK)
                     {
+                        txtSTUModel.Text = demo.stu_Tablet.information.modelName;
+
+                        if (demo.stu_Tablet.information.modelName == "STU-500" || demo.stu_Tablet.information.modelName == "STU-300")
+                          chkCalcSpeed.Enabled = false;
+
+                        if (demo.stu_Tablet.information.modelName == "STU-300")
+                          chkReverseImage.Enabled = false;
+
                         DisplaySignature(demo);
                     }
                     demo.Dispose();
@@ -78,7 +97,7 @@ namespace DemoButtons
         {
           Bitmap bitmap;
 
-          bitmap = demo.GetSigImage();
+          bitmap = GraphicsLib.GraphicFunctions.GetSigImage(this, demo, demo.stu_Tablet);
           // resize the image to fit the screen
           int scale = 2;       // halve or quarter the image size
           if( bitmap.Width > 400 )
@@ -93,7 +112,6 @@ namespace DemoButtons
           y = panel1.Location.Y + ((panel1.Height - pictureBox1.Height) / 2);
           this.pictureBox1.Location = new Point(x, y);
           pictureBox1.BringToFront();
-          //bitmap.Save("C:\\temp\\sig.png", System.Drawing.Imaging.ImageFormat.Png); // to save the image to disk
         }
     }
     

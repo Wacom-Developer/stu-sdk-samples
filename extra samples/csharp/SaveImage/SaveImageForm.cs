@@ -32,15 +32,13 @@ namespace DemoButtons
         {
           wgssSTU.IUsbDevice usbDevice = usbDevices[0]; // select a device
 
-          SignatureForm demo = new SignatureForm(usbDevice);
-          demo.ShowDialog();
-          List<wgssSTU.IPenData> penData = demo.getPenData();          
-          if (penData != null)
-          {            
-            // process penData here!
-
-            wgssSTU.IInformation information = demo.getInformation();
-            wgssSTU.ICapability capability = demo.getCapability();
+          SignatureForm demo = new SignatureForm(this, usbDevice);
+          DialogResult res = demo.ShowDialog();
+         
+          if (res == DialogResult.OK)
+          {
+            txtDisplay.Text = demo.msg;
+            DisplaySignature(demo);
           }
           demo.Dispose();
         }
@@ -54,5 +52,31 @@ namespace DemoButtons
         MessageBox.Show("No STU devices attached");       
       }      
     }
-  }
+
+    private void btnClose_Click(object sender, EventArgs e)
+    {
+      Application.Exit();
+    }
+
+    private void DisplaySignature(SignatureForm demo)
+    {
+      Bitmap bitmap;
+
+      bitmap = GraphicsLib.GraphicFunctions.GetSigImage(this, demo, demo.stu_Tablet);
+      // resize the image to fit the screen
+      int scale = 2;       // halve or quarter the image size
+      if (bitmap.Width > 400)
+        scale = 4;
+      pictureBox1.Size = new Size(bitmap.Width / scale, bitmap.Height / scale);
+      pictureBox1.SizeMode = PictureBoxSizeMode.StretchImage;
+      pictureBox1.Image = bitmap;
+      pictureBox1.Parent = this;
+      //centre the image in the panel
+      int x, y;
+      x = panel1.Location.X + ((panel1.Width - pictureBox1.Width) / 2);
+      y = panel1.Location.Y + ((panel1.Height - pictureBox1.Height) / 2);
+      this.pictureBox1.Location = new Point(x, y);
+      pictureBox1.BringToFront();
+    }
+	}
 }

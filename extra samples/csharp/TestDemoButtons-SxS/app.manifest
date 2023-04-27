@@ -28,7 +28,7 @@
 
   <dependency>
     <dependentAssembly>
-      <assemblyIdentity type="win32" name="wgssSTU" version="2.1.2.0"/>
+      <assemblyIdentity type="win32" name="wgssSTU" version="2.4.0.0"/>
     </dependentAssembly>
   </dependency>
 

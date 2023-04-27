@@ -65,6 +65,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\library\GraphicsLib.cs">
+      <Link>GraphicsLib.cs</Link>
+    </Compile>
+    <Compile Include="..\library\TabletLib.cs">
+      <Link>TabletLib.cs</Link>
+    </Compile>
     <Compile Include="DemoButtonsForm.cs">
       <SubType>Form</SubType>
     </Compile>

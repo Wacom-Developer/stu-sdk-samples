@@ -60,7 +60,7 @@ namespace DemoButtons
 
                     SignatureForm demo = new SignatureForm(this, usbDevice, serialInterface, txtCOM.Text, txtBaudRate.Text, true);
                     DialogResult res = demo.ShowDialog();
-                    //print("SignatureForm returned: " + res.ToString());
+
                     if (res == DialogResult.OK)
                     {
                         DisplaySignature(demo);
@@ -144,7 +144,7 @@ namespace DemoButtons
         {
             Bitmap bitmap;
 
-            bitmap = demo.GetSigImage();
+            bitmap = GraphicsLib.GraphicFunctions.GetSigImage(this, demo, demo.stu_Tablet);
             // resize the image to fit the screen if needed
             int scale = 1;       
             if (bitmap.Width > 400)

@@ -13,11 +13,11 @@
     /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
     protected override void Dispose(bool disposing)
     {
-      if (disposing && (m_tablet != null))
+      if (disposing && (stu_Tablet.tablet != null))
       {
-        m_tablet.onPenData -= new wgssSTU.ITabletEvents2_onPenDataEventHandler(onPenData);
-        m_tablet.disconnect();
-        m_tablet = null;
+        stu_Tablet.removeDelegates();
+        stu_Tablet.tablet.disconnect();
+        stu_Tablet.tablet = null;
       }
       if (disposing && (components != null))
       {
