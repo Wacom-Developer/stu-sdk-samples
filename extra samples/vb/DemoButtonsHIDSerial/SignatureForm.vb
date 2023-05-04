@@ -4,8 +4,10 @@
 ' Display signature input form on PC screen and on STU pad and process user input
 ' Allows user to choose HID or serial interface with the pad
 ' For the serial interface the virtual COM port must be known in advance
+' Compatible with the STU-300, 430, 500, 530 and 540 in HID mode and the 430V in serial mode
+' Using the 540 in serial mode is much too slow
 '
-' Copyright (c) 2021 Wacom Ltd. All rights reserved
+' Copyright (c) 2023 Wacom Ltd. All rights reserved
 '
 Enum PenDataOptionMode
    PenDataOptionMode_None

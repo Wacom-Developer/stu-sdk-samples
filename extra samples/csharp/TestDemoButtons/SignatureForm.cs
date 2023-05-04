@@ -3,9 +3,12 @@
   SignatureForm.cs
   
   Display signature capture form on STU pad and on Windows
-  with OK, Clear and Cancel buttons
+  with OK, Clear and Cancel buttons. After capturing the signature
+  displays it on the main form as an image.
+
+  Compatible with STU-300, STU-430, STU-500, STU-530 and STU-540
   
-  Copyright (c) 2015 Wacom GmbH. All rights reserved.
+  Copyright (c) 2023 Wacom Ltd. All rights reserved.
   
 ********************************************************/
 // Notes:
@@ -19,6 +22,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.IO;
 using System.Text;
 using System.Windows.Forms;
 
@@ -26,97 +30,104 @@ namespace DemoButtons
 {
   public partial class SignatureForm : Form
   {
-    private wgssSTU.Tablet       m_tablet;
-    private wgssSTU.ICapability  m_capability;
-    private wgssSTU.IInformation m_information;
-
-    // In order to simulate buttons, we have our own Button class that stores the bounds and event handler.
-    // Using an array of these makes it easy to add or remove buttons as desired.
-    private delegate void ButtonClick();
-    private struct Button
-    {
-      public Rectangle Bounds; // in Screen coordinates
-      public String Text;
-      public EventHandler Click;
-
-      public void PerformClick()
-      {
-        Click(this, null);
-      }
-    };
-
-    private Pen m_penInk;  // cached object.
-    
-    // The isDown flag is used like this:
-    // 0 = up
-    // +ve = down, pressed on button number
-    // -1 = down, inking
-    // -2 = down, ignoring
-    private int m_isDown;
-
-    private List<wgssSTU.IPenData> m_penData; // Array of data being stored. This can be subsequently used as desired.
-
-    private Button[] m_btns; // The array of buttons that we are emulating.
-
-    private Bitmap m_bitmap; // The bitmap that we display on the screen.
-    private wgssSTU.encodingMode m_encodingMode; // How we send the bitmap to the device.
-    private byte[] m_bitmapData; // This is the flattened data of the bitmap that we send to the device.
-
-    // As per the file comment, there are three coordinate systems to deal with.
-    // To help understand, we have left the calculations in place rather than optimise them.
+    public TabletLib.STU_Tablet stu_Tablet;
+    private int penDataType;
+    private bool calcPenSpeed;
+    private bool reverseSigImage;
+    private bool saveSigImage;
 
     DemoButtonsForm m_parent;   // give access to calling form
 
-    private PointF tabletToClient(wgssSTU.IPenData penData)
-    {
-      // Client means the Windows Form coordinates.
-      return new PointF((float)penData.x * this.ClientSize.Width / m_capability.tabletMaxX, (float)penData.y * this.ClientSize.Height / m_capability.tabletMaxY);
-    }
+    private GraphicsLib.Buttons STUButtons;
 
-
-
-    private Point tabletToScreen(wgssSTU.IPenData penData)
-    {
-      // Screen means LCD screen of the tablet.
-      return Point.Round(new PointF((float)penData.x * m_capability.screenWidth / m_capability.tabletMaxX, (float)penData.y * m_capability.screenHeight / m_capability.tabletMaxY));
-    }
-    
-
-    
-    private Point clientToScreen(Point pt)
-    {
-      // client (window) coordinates to LCD screen coordinates. 
-      // This is needed for converting mouse coordinates into LCD bitmap coordinates as that's
-      // what this application uses as the coordinate space for buttons.
-      return Point.Round(new PointF((float)pt.X * m_capability.screenWidth / this.ClientSize.Width, (float)pt.Y * m_capability.screenHeight / this.ClientSize.Height));
-    }
-
-
-    private void clearScreen()
+    public void updateScreen()
     {
       // note: There is no need to clear the tablet screen prior to writing an image.
-      m_tablet.writeImage((byte)m_encodingMode, m_bitmapData);
+      stu_Tablet.tablet.writeImage((byte)stu_Tablet.encodingMode, stu_Tablet.bitmapData);
 
-      m_penData.Clear();
-      m_isDown = 0;
+      if (stu_Tablet.penDataOptionMode == (int)PenDataOptionMode.PenDataOptionMode_TimeCountSequence)
+      {
+        stu_Tablet.penTimeData.Clear();
+      }
+      else
+      {
+        stu_Tablet.penData.Clear();
+      }
+
+      stu_Tablet.m_isDown = 0;
       this.Invalidate();
     }
 
-
     private void btnOk_Click(object sender, EventArgs e)
     {
-      // You probably want to add additional processing here.
-              if (m_penData.Count > 0) {
-                  this.DialogResult = DialogResult.OK;
-                  this.Close();
-              }
-    }
+      String msgText;
 
+      // You probably want to add additional processing here.
+      penDataType = stu_Tablet.penDataOptionMode;
+
+      if (stu_Tablet.penDataOptionMode == (int)PenDataOptionMode.PenDataOptionMode_TimeCountSequence)
+      {
+        if (stu_Tablet.penTimeData.Count > 0)
+        {
+          ++stu_Tablet.clickEventCount;
+          if (stu_Tablet.clickEventCount == 1)
+          {
+            if (saveSigImage)
+            {
+              msgText = stu_Tablet.saveImage(reverseSigImage);
+              print(msgText);
+            }
+            if (calcPenSpeed)
+            {
+              //  Calculate the average speed of the pen
+              msgText = stu_Tablet.calcSpeed();
+              print(msgText);
+            }
+          }
+          this.DialogResult = DialogResult.OK;
+          this.Close();
+        }
+      }
+      else
+      {
+        if (stu_Tablet.penData.Count > 0)
+        {
+          ++stu_Tablet.clickEventCount;
+          if (stu_Tablet.clickEventCount == 1)
+          {
+            if (saveSigImage)
+            {
+              msgText = stu_Tablet.saveImage(reverseSigImage);
+              print(msgText);
+            }
+            /*
+            if (calcPenSpeed)
+            {
+              // Calculate the average speed of the pen
+              msgText = stu_Tablet.calcSpeed();
+              print(msgText);
+            }
+            */
+          }
+          this.DialogResult = DialogResult.OK;
+          this.Close();
+        }
+      }
+    }
+    
 
     private void btnCancel_Click(object sender, EventArgs e)
     {
       // You probably want to add additional processing here.
-      m_penData.Clear();
+      if (stu_Tablet.penDataOptionMode == (int)PenDataOptionMode.PenDataOptionMode_TimeCountSequence)
+      {
+        this.stu_Tablet.penTimeData = null;
+      }
+      else
+      {
+        this.stu_Tablet.penData = null;
+      }
+
       this.DialogResult = DialogResult.Cancel;
       this.Close();
     }
@@ -124,19 +135,26 @@ namespace DemoButtons
     
     private void btnClear_Click(object sender, EventArgs e)
     {
-      if (m_penData.Count != 0)
+      if (stu_Tablet.penData.Count != 0 || stu_Tablet.penTimeData.Count != 0)
       {
-        clearScreen();
+        updateScreen();
       }
     }
 
-    
-
-
     // Pass in the device you want to connect to!
-    public SignatureForm(DemoButtonsForm parent, wgssSTU.IUsbDevice usbDevice)
+    // The 3 boolean values relate to the check boxes on the main form.
+    // These are to enable the options for saving the image to disk, calculating the pen speed and reversing the image on the STU
+    public SignatureForm(DemoButtonsForm parent, wgssSTU.IUsbDevice usbDevice, bool chkSaveImage, bool chkCalcSpeed, bool chkReverseImage)
     {
-        m_parent = parent;
+      int currentPenDataOptionMode;
+
+      saveSigImage = chkSaveImage;
+      calcPenSpeed = chkCalcSpeed;
+      reverseSigImage = chkReverseImage;
+      m_parent = parent;
+
+      stu_Tablet = new TabletLib.STU_Tablet(this, parent, this.ClientSize.Height, this.ClientSize.Width);
+
       // This is a DPI aware application, so ensure you understand how .NET client coordinates work.
       // Testing using a Windows installation set to a high DPI is recommended to understand how
       // values get scaled or not.
@@ -146,377 +164,125 @@ namespace DemoButtons
 
       InitializeComponent();
 
-      m_penData = new List<wgssSTU.IPenData>();
-
-      m_tablet = new wgssSTU.Tablet();
-      wgssSTU.ProtocolHelper protocolHelper = new wgssSTU.ProtocolHelper();
-
-      // A more sophisticated applications should cycle for a few times as the connection may only be
+      // A more sophisticated application should cycle for a few times as the connection may only be
       // temporarily unavailable for a second or so. 
       // For example, if a background process such as Wacom STU Display
       // is running, this periodically updates a slideshow of images to the device.
 
-      wgssSTU.IErrorCode ec = m_tablet.usbConnect(usbDevice, true);
+      wgssSTU.IErrorCode ec = stu_Tablet.tablet.usbConnect(usbDevice, true);
       if (ec.value == 0)
       {
-        m_capability = m_tablet.getCapability();
-        m_information = m_tablet.getInformation();
-        print("Connected: " + m_information.modelName);
+        stu_Tablet.capability = stu_Tablet.tablet.getCapability();
+        stu_Tablet.information = stu_Tablet.tablet.getInformation();
+        print("Connected: " + stu_Tablet.information.modelName);
+
+        // First find out if the pad supports the pen data option mode (the 300 doesn't)
+        currentPenDataOptionMode = stu_Tablet.GetCurrentPenDataOptionMode();
+
+        // Set up the tablet to return time stamp with the pen data or just basic data
+        stu_Tablet.SetCurrentPenDataOptionMode(currentPenDataOptionMode);
       }
       else
       {
         throw new Exception(ec.message);
       }
 
+      // Set the size of the client window to be actual size, 
+      // based on the reported DPI of the monitor.
+
       this.SuspendLayout();
       this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
       this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
 
-      // Set the size of the client window to be actual size, 
-      // based on the reported DPI of the monitor.
-
-      Size clientSize = new Size((int)(m_capability.tabletMaxX / 2540F * 96F), (int)(m_capability.tabletMaxY / 2540F * 96F));
+      Size clientSize = new Size((int)(stu_Tablet.capability.tabletMaxX / 2540F * 96F), (int)(stu_Tablet.capability.tabletMaxY / 2540F * 96F));
       this.ClientSize = clientSize;
       this.ResumeLayout();
 
-      m_btns = new Button[3];
-      if (usbDevice.idProduct != 0x00a2)
-      {
-        // Place the buttons across the bottom of the screen.
-
-        int w2 = m_capability.screenWidth / 3;
-        int w3 = m_capability.screenWidth / 3;
-        int w1 = m_capability.screenWidth - w2 - w3;
-        int y = m_capability.screenHeight * 6 / 7;
-        int h = m_capability.screenHeight - y;
-
-        m_btns[0].Bounds = new Rectangle(0, y, w1, h);
-        m_btns[1].Bounds = new Rectangle(w1, y, w2, h);
-        m_btns[2].Bounds = new Rectangle(w1 + w2, y, w3, h);
-      }
-      else
-      {
-        // The STU-300 is very shallow, so it is better to utilise
-        // the buttons to the side of the display instead.
-
-        int x = m_capability.screenWidth * 3 / 4;
-        int w = m_capability.screenWidth - x;
-
-        int h2 = m_capability.screenHeight / 3;
-        int h3 = m_capability.screenHeight / 3;
-        int h1 = m_capability.screenHeight - h2 - h3;
-
-        m_btns[0].Bounds = new Rectangle(x, 0, w, h1);
-        m_btns[1].Bounds = new Rectangle(x, h1, w, h2);
-        m_btns[2].Bounds = new Rectangle(x, h1 + h2, w, h3);
-      }
-      m_btns[0].Text = "OK";
-      m_btns[1].Text = "Clear";
-      m_btns[2].Text = "Cancel";
-      m_btns[0].Click = new EventHandler(btnOk_Click);
-      m_btns[1].Click = new EventHandler(btnClear_Click);
-      m_btns[2].Click = new EventHandler(btnCancel_Click);
-
-
-      // Disable color if the STU-520 bulk driver isn't installed.
-      // This isn't necessary, but uploading colour images with out the driver
-      // is very slow.
+      STUButtons = new GraphicsLib.Buttons(usbDevice.idProduct, stu_Tablet.capability, reverseSigImage, btnOk_Click, btnClear_Click, btnCancel_Click);
+      stu_Tablet.btns = STUButtons.btns;
 
       // Calculate the encodingMode that will be used to update the image
+      stu_Tablet.SetEncodingMode();
+      stu_Tablet.bitmap = GraphicsLib.GraphicFunctions.CreateBitmap(stu_Tablet.capability, stu_Tablet.useColor, STUButtons.btns);
 
-    ushort idP = m_tablet.getProductId();
-    wgssSTU.encodingFlag encodingFlag = (wgssSTU.encodingFlag)protocolHelper.simulateEncodingFlag(idP, 0);
-    bool useColor = false;
-    if ((encodingFlag & (wgssSTU.encodingFlag.EncodingFlag_16bit | wgssSTU.encodingFlag.EncodingFlag_24bit)) != 0)
-    {
-        if (m_tablet.supportsWrite())
-            useColor = true;
-    }
-    if ((encodingFlag & wgssSTU.encodingFlag.EncodingFlag_24bit) != 0)
-    {
-        m_encodingMode = m_tablet.supportsWrite() ? wgssSTU.encodingMode.EncodingMode_24bit_Bulk : wgssSTU.encodingMode.EncodingMode_24bit;
-    }
-    else if ((encodingFlag & wgssSTU.encodingFlag.EncodingFlag_16bit) != 0)
-    {
-        m_encodingMode = m_tablet.supportsWrite() ? wgssSTU.encodingMode.EncodingMode_16bit_Bulk : wgssSTU.encodingMode.EncodingMode_16bit;
-    }
-    else
-    {
-        // assumes 1bit is available
-        m_encodingMode = wgssSTU.encodingMode.EncodingMode_1bit;
-    }
-
- 
-
-      // Size the bitmap to the size of the LCD screen.
-      // This application uses the same bitmap for both the screen and client (window).
-      // However, at high DPI, this bitmap will be stretch and it would be better to 
-      // create individual bitmaps for screen and client at native resolutions.
-      m_bitmap = new Bitmap(m_capability.screenWidth, m_capability.screenHeight, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+      if (reverseSigImage)
       {
-        Graphics gfx = Graphics.FromImage(m_bitmap);
-        gfx.Clear(Color.White);
+        /* Flip the bitmap so the image appears upside down on the pad.
+         * This necessitates resetting the button rectangle boundary information
+        */
+        // The Y position for all 3 buttons is 0
+        int btnYPos = 0;
+        int btnWidth = stu_Tablet.capability.screenWidth / 3;
+        int btnHeight = stu_Tablet.capability.screenHeight - (stu_Tablet.capability.screenHeight * 6 / 7);
 
-        // Uses pixels for units as DPI won't be accurate for tablet LCD.
-        Font font = new Font(FontFamily.GenericSansSerif, m_btns[0].Bounds.Height / 2F, GraphicsUnit.Pixel);
-        StringFormat sf = new StringFormat();
-        sf.Alignment = StringAlignment.Center;
-        sf.LineAlignment = StringAlignment.Center;
-
-        if (useColor)
-        {
-          gfx.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
-        }
-        else
-        {
-          // Anti-aliasing should be turned off for monochrome devices.
-          gfx.TextRenderingHint = System.Drawing.Text.TextRenderingHint.SingleBitPerPixel;
-        }
-
-        // Draw the buttons
-        for (int i = 0; i < m_btns.Length; ++i)
-        {
-          if (useColor)
-          {
-            gfx.FillRectangle(Brushes.LightGray, m_btns[i].Bounds);
-          }
-          gfx.DrawRectangle(Pens.Black, m_btns[i].Bounds);
-          gfx.DrawString(m_btns[i].Text, font, Brushes.Black, m_btns[i].Bounds, sf);
-        }
-
-        gfx.Dispose();
-        font.Dispose();
-
-        // Finally, use this bitmap for the window background.
-        this.BackgroundImage = m_bitmap;
-        this.BackgroundImageLayout = ImageLayout.Stretch;
+        STUButtons.btns[0].Bounds = new Rectangle(0, btnYPos, btnWidth, btnHeight);
+        STUButtons.btns[1].Bounds = new Rectangle(btnWidth, btnYPos, btnWidth, btnHeight);
+        STUButtons.btns[2].Bounds = new Rectangle((btnWidth * 2) + 1, btnYPos, btnWidth, btnHeight);
+        stu_Tablet.bitmap.RotateFlip(RotateFlipType.Rotate180FlipNone);
       }
 
-      // Now the bitmap has been created, it needs to be converted to device-native
-      // format.
-      {
+      stu_Tablet.STUButtons = STUButtons;
 
-        // Unfortunately it is not possible for the native COM component to
-        // understand .NET bitmaps. We have therefore convert the .NET bitmap
-        // into a memory blob that will be understood by COM.
+      // Finally, use this bitmap for the window background.
+      this.BackgroundImage = stu_Tablet.bitmap;
+      this.BackgroundImageLayout = ImageLayout.Stretch;
 
-        System.IO.MemoryStream stream = new System.IO.MemoryStream();
-        m_bitmap.Save(stream, System.Drawing.Imaging.ImageFormat.Png);
-        m_bitmapData = (byte[])protocolHelper.resizeAndFlatten(stream.ToArray(), 0, 0, (uint)m_bitmap.Width, (uint)m_bitmap.Height, m_capability.screenWidth, m_capability.screenHeight, (byte)m_encodingMode, wgssSTU.Scale.Scale_Fit, 0, 0);
-        protocolHelper = null;
-        stream.Dispose();
-      }
+      stu_Tablet.ConvertBitmap();
 
       // If you wish to further optimize image transfer, you can compress the image using 
       // the Zlib algorithm.
       
       bool useZlibCompression = false;
-      if (!useColor && useZlibCompression)
+      if (!stu_Tablet.useColor && useZlibCompression)
       {
-        // m_bitmapData = compress_using_zlib(m_bitmapData); // insert compression here!
-        m_encodingMode |= wgssSTU.encodingMode.EncodingMode_Zlib;
+        // stu_Tablet.bitmapData = compress_using_zlib(stu_Tablet.bitmapData); // insert compression here!
+        stu_Tablet.encodingMode |= wgssSTU.encodingMode.EncodingMode_Zlib;
       }
 
-      // Calculate the size and cache the inking pen.
-      
-      SizeF s = this.AutoScaleDimensions;
-      float inkWidthMM = 0.7F;
-      m_penInk = new Pen(Color.DarkBlue, inkWidthMM / 25.4F * ((s.Width + s.Height) / 2F));
-      m_penInk.StartCap = m_penInk.EndCap = System.Drawing.Drawing2D.LineCap.Round;
-      m_penInk.LineJoin = System.Drawing.Drawing2D.LineJoin.Round;
-
-      
-      // Add the delagate that receives pen data.
-      m_tablet.onPenData += new wgssSTU.ITabletEvents2_onPenDataEventHandler(onPenData);
-      m_tablet.onGetReportException += new wgssSTU.ITabletEvents2_onGetReportExceptionEventHandler(onGetReportException);
-
+      stu_Tablet.addDelegates();  // Add the delegates for receiving pen data
 
       // Initialize the screen
-      clearScreen();
+      updateScreen();
 
       // Enable the pen data on the screen (if not already)
-      m_tablet.setInkingMode(0x01);
+      stu_Tablet.tablet.setInkingMode(0x01);
+
+      // Recalculate the signature form size after the changes above
+      stu_Tablet.sigFormWidth = this.ClientSize.Width;
+      stu_Tablet.sigFormHeight = this.ClientSize.Height;
     }
-
-
 
     private void Form2_FormClosed(object sender, FormClosedEventArgs e)
     {
       // Ensure that you correctly disconnect from the tablet, otherwise you are 
       // likely to get errors when wanting to connect a second time.
-      if (m_tablet != null)
+      if (stu_Tablet.tablet != null)
       {
-        m_tablet.onPenData -= new wgssSTU.ITabletEvents2_onPenDataEventHandler(onPenData);
-        m_tablet.onGetReportException -= new wgssSTU.ITabletEvents2_onGetReportExceptionEventHandler(onGetReportException);
-        
-        m_tablet.setInkingMode(0x00);
-        m_tablet.setClearScreen();
-        m_tablet.disconnect();
+        stu_Tablet.removeDelegates();
+        stu_Tablet.tablet.setInkingMode(0x00);
+        stu_Tablet.tablet.setClearScreen();
+        stu_Tablet.tablet.disconnect();
       }
 
-      m_penInk.Dispose();
+      stu_Tablet.penInk.Dispose();
     }
-
-    private void onGetReportException(wgssSTU.ITabletEventsException tabletEventsException)
-    {
-      try
-      {
-        tabletEventsException.getException();
-      }
-      catch (Exception e)
-      {
-        MessageBox.Show("Error: " + e.Message);
-        m_tablet.disconnect();
-        m_tablet = null;
-        m_penData = null;
-        this.Close();
-      }
-    }
-
-    private void onPenData(wgssSTU.IPenData penData) // Process incoming pen data
-    {
-      Point pt = tabletToScreen(penData);
-
-      int btn = 0; // will be +ve if the pen is over a button.
-      {        
-        for (int i = 0; i < m_btns.Length; ++i)
-        {
-          if (m_btns[i].Bounds.Contains(pt))
-          {
-            btn = i+1;
-            break;
-          }          
-        }
-      }
-
-      bool isDown = (penData.sw != 0);
-
-      // This code uses a model of four states the pen can be in:
-      // down or up, and whether this is the first sample of that state.
-
-      if (isDown)
-      {
-        if (m_isDown == 0)
-        {
-          // transition to down
-          if (btn > 0)
-          {
-            // We have put the pen down on a button.
-            // Track the pen without inking on the client.
-
-            m_isDown = btn; 
-          }
-          else
-          {
-            // We have put the pen down somewhere else.
-            // Treat it as part of the signature.
-
-            m_isDown = -1;
-          }
-        }
-        else
-        {
-          // already down, keep doing what we're doing!
-        }
-
-        // draw
-        if (m_penData.Count != 0 && m_isDown == -1)
-        {
-          // Draw a line from the previous down point to this down point.
-          // This is the simplist thing you can do; a more sophisticated program
-          // can perform higher quality rendering than this!
-          
-          Graphics gfx = this.CreateGraphics();
-          gfx.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
-          gfx.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.High;
-          gfx.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
-          gfx.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
-          
-          wgssSTU.IPenData prevPenData = m_penData[m_penData.Count - 1];
-
-          PointF prev = tabletToClient(prevPenData);
-
-          gfx.DrawLine(m_penInk, prev, tabletToClient(penData));
-          gfx.Dispose();
-        }
-
-        // The pen is down, store it for use later.
-        if (m_isDown == -1)
-          m_penData.Add(penData);
-      }
-      else
-      {
-        if (m_isDown != 0)
-        {
-          // transition to up
-          if (btn > 0)
-          {
-            // The pen is over a button
-
-            if (btn == m_isDown)
-            {
-              // The pen was pressed down over the same button as is was lifted now. 
-              // Consider that as a click!
-              m_btns[btn - 1].PerformClick();
-            }
-          }
-          m_isDown = 0;
-        }
-        else
-        {
-           // still up
-        }
-
-        // Add up data once we have collected some down data.
-        if (m_penData.Count != 0)
-          m_penData.Add(penData);
-      }
-    }
-
-       
-
 
     private void Form2_Paint(object sender, PaintEventArgs e)
     {
-      if (m_penData.Count != 0)
-      {
-        // Redraw all the pen data up until now!
+      // Call the appropriate routine to render the pen strokes on the client window
+      // depending on what type of pen data is being received
 
-        Graphics gfx = e.Graphics;
-        gfx.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
-        gfx.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.High;
-        gfx.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
-        gfx.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
-        bool isDown = false;
-        PointF prev = new PointF();
-        for (int i = 0; i < m_penData.Count; ++i)
-        {
-          if (m_penData[i].sw != 0)
-          {
-            if (!isDown)
-            {
-              isDown = true;
-              prev = tabletToClient(m_penData[i]);
-            }
-            else
-            {
-              PointF curr = tabletToClient(m_penData[i]);
-              gfx.DrawLine(m_penInk, prev, curr);
-              prev = curr;
-            }
-          }
-          else
-          {
-            if (isDown)
-            {
-              isDown = false;
-            }
-          }
-        }
+      if (stu_Tablet.penDataOptionMode == (int)PenDataOptionMode.PenDataOptionMode_TimeCountSequence)
+      {
+        GraphicsLib.GraphicFunctions.renderPenTimeData(this, stu_Tablet);
       }
-          
+      else
+      {
+        GraphicsLib.GraphicFunctions.renderPenData(this, stu_Tablet);
+      }
     }
 
+    
     private void Form2_MouseClick(object sender, MouseEventArgs e)
     {      
       // Enable the mouse to click on the simulated buttons that we have displayed.
@@ -525,8 +291,8 @@ namespace DemoButtons
       // if the pen was down at the time of this click, especially if the pen was logically
       // also 'pressing' a button! This demo however ignores any that.
 
-      Point pt = clientToScreen(e.Location);
-      foreach (Button btn in m_btns)
+      Point pt = stu_Tablet.ClientToScreen(e.Location);
+      foreach (GraphicsLib.Buttons.Button btn in STUButtons.btns)
       {
         if (btn.Bounds.Contains(pt))
         {
@@ -539,70 +305,5 @@ namespace DemoButtons
     {
         m_parent.print(txt);            // update parent form
     }
-
-
-
-    public List<wgssSTU.IPenData> getPenData()
-    {
-      return m_penData;
-    }
-
-    public wgssSTU.ICapability getCapability()
-    {
-      return m_penData != null ? m_capability : null;
-    }
-
-    public wgssSTU.IInformation getInformation()
-    {
-      return m_penData != null ? m_information : null;
-    }
-
-    public Bitmap GetSigImage() {
-
-        Bitmap bitmap;
-        SolidBrush brush;
-        Point p1, p2;
-
-        Rectangle rect = new Rectangle(0, 0,
-            m_capability.screenWidth, m_capability.screenHeight);
-
-        try
-        {
-            bitmap = new Bitmap(rect.Width, rect.Height);
-            Graphics gfx = Graphics.FromImage(bitmap);
-            SizeF s = this.AutoScaleDimensions;
-            //            Dim inkWidthMM = 0.7F
-            Single inkWidthMM = 1.0F;
-            m_penInk = new Pen(Color.DarkBlue, inkWidthMM / 25.4F * ((s.Width + s.Height) / 2.0F));
-            m_penInk.StartCap = m_penInk.EndCap = System.Drawing.Drawing2D.LineCap.Round;
-            m_penInk.LineJoin = System.Drawing.Drawing2D.LineJoin.Round;
-
-            gfx.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
-            gfx.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.High;
-            gfx.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
-            gfx.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
-
-            brush = new SolidBrush(Color.White);
-            gfx.FillRectangle(brush, 0, 0, rect.Width, rect.Height);
-
-            for( int i=1; i<m_penData.Count; ++i)
-            {
-                p1 = tabletToScreen(m_penData[i - 1]);
-                p2 = tabletToScreen(m_penData[i]);
-
-                if (m_penData[i-1].sw > 0 || m_penData[i].sw > 0)
-                {
-                    gfx.DrawLine(m_penInk, p1, p2);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            print("Exception: " + ex.Message);
-            MessageBox.Show("Exception: " + ex.Message);
-            bitmap = null;
-        }
-        return bitmap;
-      }
   }
 }

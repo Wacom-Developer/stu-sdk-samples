@@ -13,11 +13,11 @@
     /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
     protected override void Dispose(bool disposing)
     {
-      if (disposing && (m_tablet != null))
+      if (disposing && (stu_Tablet.tablet != null))
       {
-        m_tablet.onPenData -= new wgssSTU.ITabletEvents2_onPenDataEventHandler(onPenData);
-        m_tablet.disconnect();
-        m_tablet = null;
+        stu_Tablet.removeDelegates();
+        stu_Tablet.tablet.disconnect();
+        stu_Tablet.tablet = null;
       }
       if (disposing && (components != null))
       {
@@ -34,21 +34,21 @@
     /// </summary>
     private void InitializeComponent()
     {
-      this.SuspendLayout();
-      // 
-      // SignatureForm
-      // 
-      this.ClientSize = new System.Drawing.Size(284, 261);
-      this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
-      this.MaximizeBox = false;
-      this.MinimizeBox = false;
-      this.Name = "SignatureForm";
-      this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-      this.Text = "Signature";
-      this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.Form2_FormClosed);
-      this.Paint += new System.Windows.Forms.PaintEventHandler(this.Form2_Paint);
-      this.MouseClick += new System.Windows.Forms.MouseEventHandler(this.Form2_MouseClick);
-      this.ResumeLayout(false);
+        this.SuspendLayout();
+        // 
+        // SignatureForm
+        // 
+        this.ClientSize = new System.Drawing.Size(284, 261);
+        this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
+        this.MaximizeBox = false;
+        this.MinimizeBox = false;
+        this.Name = "SignatureForm";
+        this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
+        this.Text = "Signature Capture";
+        this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.Form2_FormClosed);
+        this.Paint += new System.Windows.Forms.PaintEventHandler(this.Form2_Paint);
+        this.MouseClick += new System.Windows.Forms.MouseEventHandler(this.Form2_MouseClick);
+        this.ResumeLayout(false);
 
     }
 

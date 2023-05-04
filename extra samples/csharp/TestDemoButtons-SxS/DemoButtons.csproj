@@ -52,10 +52,9 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Interop.wgssSTU, Version=2.1.4.0, Culture=neutral, PublicKeyToken=20000022810869de, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="Interop.wgssSTU">
+      <HintPath>C:\Program Files (x86)\Wacom STU SDK\COM\bin\Win32\Interop.wgssSTU.dll</HintPath>
       <EmbedInteropTypes>True</EmbedInteropTypes>
-      <HintPath>.\Interop.wgssSTU.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
@@ -65,6 +64,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\library\GraphicsLib.cs">
+      <Link>GraphicsLib.cs</Link>
+    </Compile>
+    <Compile Include="..\library\TabletLib.cs">
+      <Link>TabletLib.cs</Link>
+    </Compile>
     <Compile Include="DemoButtonsForm.cs">
       <SubType>Form</SubType>
     </Compile>

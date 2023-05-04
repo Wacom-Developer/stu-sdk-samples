@@ -17,6 +17,14 @@ using System.Drawing;
 using System.Text;
 using System.Windows.Forms;
 
+enum PenDataOptionMode
+{
+  PenDataOptionMode_None,
+  PenDataOptionMode_TimeCount,
+  PenDataOptionMode_SequenceNumber,
+  PenDataOptionMode_TimeCountSequence
+};
+
 namespace DemoButtons
 {
     public partial class DemoButtonsForm : Form
@@ -71,7 +79,7 @@ namespace DemoButtons
         {
         Bitmap bitmap;
 
-        bitmap = demo.GetSigImage();
+        bitmap = GraphicsLib.GraphicFunctions.GetSigImage(this, demo, demo.stu_Tablet);
         // resize the image to fit the screen
         int scale = 2;       // halve or quarter the image size
         if( bitmap.Width > 400 )

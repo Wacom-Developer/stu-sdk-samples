@@ -3,6 +3,8 @@
   Form1.cs
   
   Allow user to select an image and send it to the STU
+  Compatible with STU-300, STU-430, STU-500, STU-530 and STU-540
+  but not the obsolete STU-541
 
   Copyright (c) 2015 Wacom GmbH. All rights reserved.
   
