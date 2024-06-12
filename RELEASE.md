@@ -1,8 +1,14 @@
 # STU SDK
 
-## Version 2.15.5
+## Version 2.16.1
 
 ## History
+
+###   Release 2.16.1   20-July-2023
+    * Fix for TlsInterfaceImpl removing win32-specific code
+
+###   Release 2.16.0   31-May-2023
+    * Added openssl3 compatibility to wgssSTU
 
 ###   Release 2.15.5   29-May-2020
     * Rebuilt zip file
