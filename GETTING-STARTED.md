@@ -6,8 +6,8 @@
 Download the SDK from https://developer.wacom.com/developer-dashboard
 
 * Login using your Wacom ID
-* Select **Downloads for Wacom Device Kit**
-* Download **STU SDK for Windows Desktop** and/or **STU SDK for Linux**
+* Navigate to **Wacom Device Kit**
+* Select **More info** on **STU SDK for Windows Desktop** and/or **STU SDK for Linux**
 * Accept the End User License Agreement to use the SDK
 
 The downloaded Zip file contains the SDK with documentation.
