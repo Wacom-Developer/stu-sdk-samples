@@ -13,11 +13,6 @@
 #include <WacomGSS/STU/SerialInterface.hpp>
 #include <WacomGSS/STU/ProtocolHelper.hpp>
 
-#if defined(WacomGSS_WIN32)
-#include <codecvt>
-#include <locale>
-#endif
-
 #include <iostream>
 #include <sstream>
 #include <iomanip>
@@ -268,10 +263,10 @@ void queryCert(WacomGSS::STU::TlsInterface & intf)
 {
   using namespace std;
   using namespace WacomGSS::STU;
-  using namespace WacomGSS::OpenSSL;
+  using namespace WacomGSS::OpenSSL3;
 
   auto cert = intf.getPeerCertificate();
-  auto name = X509_get_subject_name(cert);
+  auto name = cert.getref_subject_name();
 
   cout << "Peer Certificate Name =" << endl;
   int indent = 2;
@@ -848,8 +843,10 @@ void querySerial(char const * comPort, std::uint32_t baudRate)
     wstring port;
 
 #if defined(WacomGSS_WIN32)
-    wstring_convert<codecvt_utf8_utf16<wchar_t, 0x10ffff, little_endian>,wchar_t> conv;
-    auto comPort_s = conv.from_bytes(comPort);
+	int mb2wc{::MultiByteToWideChar(CP_UTF8,0, comPort, -1,nullptr,0)};
+	std::vector<wchar_t> buf(mb2wc);
+	::MultiByteToWideChar(CP_UTF8,0, comPort, -1,buf.data(),mb2wc);
+	std::wstring comPort_s{buf.data()};
 #else
     auto comPort_s = comPort;
 #endif
