@@ -4,10 +4,12 @@
 #include <WacomGSS/STU/getUsbDevices.hpp>
 
 #include <WacomGSS/Win32/com.hpp>
-#include <WacomGSS/Win32/d2d1.hpp>
-#include <WacomGSS/Win32/dwrite.hpp>
 #include <WacomGSS/setThreadName.hpp>
 
+WacomGSS_windows_include_begin
+#include <d2d1.h>
+#include <dwrite.h>
+WacomGSS_windows_include_end
 
 #include <sstream>
 
@@ -1398,7 +1400,7 @@ class SignatureForm : Factory, WacomGSS::STU::ProtocolHelper::ReportHandler
     m_hwnd(nullptr),
     m_hInstance(hInstance),
     m_isTls(dynamic_cast<WacomGSS::STU::TlsInterface *>(intf.get())!= 0),
-    m_tablet(std::move(intf), std::make_shared<WacomGSS::STU::OpenSSL_EncryptionHandler>(),std::make_shared<WacomGSS::STU::OpenSSL_EncryptionHandler2>()),    
+    m_tablet(std::move(intf), std::make_shared<WacomGSS::STU::OpenSSL3_EncryptionHandler>(),std::make_shared<WacomGSS::STU::OpenSSL3_EncryptionHandler2>()),
     m_shcore(::LoadLibrary(L"Shcore.dll"), std::nothrow),
     m_pGetDPIForMonitor(nullptr),
     m_btns(3),
