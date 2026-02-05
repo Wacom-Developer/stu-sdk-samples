@@ -35,8 +35,8 @@ static const char k_sigExit_s[] = "use 'kill' to make process exit cleanly";
 
 
 // Variables shared across threads
-static WacomGSS::atomic<bool>                    g_quitFlag;
-static WacomGSS::atomic<WacomGSS::STU::Tablet *> g_tablet;
+static std::atomic<bool>                    g_quitFlag;
+static std::atomic<WacomGSS::STU::Tablet *> g_tablet;
 
 
 
@@ -416,7 +416,7 @@ int main()
       cout << "Connected!" << endl;
 
 #if defined(WacomGSS_STU_Tablet_OpenSSL_hpp)
-      WacomGSS::STU::Tablet tablet(std::move(intf), std::make_shared<WacomGSS::STU::OpenSSL_EncryptionHandler>(), std::make_shared<WacomGSS::STU::OpenSSL_EncryptionHandler2>() );
+      WacomGSS::STU::Tablet tablet(std::move(intf), std::make_shared<WacomGSS::STU::OpenSSL3_EncryptionHandler>(), std::make_shared<WacomGSS::STU::OpenSSL3_EncryptionHandler2>() );
 #else
       WacomGSS::STU::Tablet tablet(std::move(intf));
 #endif

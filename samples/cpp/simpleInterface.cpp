@@ -25,7 +25,7 @@
 #include <WacomGSS/STU/TlsProtocol.hpp>
 
 
-static WacomGSS::atomic<WacomGSS::STU::Interface *> g_intf;
+static std::atomic<WacomGSS::STU::Interface *> g_intf;
 
 
 extern "C"
