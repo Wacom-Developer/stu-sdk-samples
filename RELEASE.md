@@ -1,8 +1,11 @@
 # STU SDK
 
-## Version 2.16.1
+## Version 2.18.0
 
 ## History
+
+###   Release 2.18.0   15-May-2026
+    * Updated for OpenSSL 3.6.1
 
 ###   Release 2.16.1   20-July-2023
     * Fix for TlsInterfaceImpl removing win32-specific code
@@ -65,7 +68,7 @@
 ###   Release 2.13.0  2017-02-10
     *  Extended STU-540 C++ interface to C: Same functionality as the original C++ version but with a C interface
     
-###   Release 2,12.0
+###   Release 2.12.0
     *  Internal build
     
 ###   Release 2.11.0
