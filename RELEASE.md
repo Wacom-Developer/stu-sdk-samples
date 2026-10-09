@@ -1,8 +1,11 @@
 # STU SDK
 
-## Version 2.18.0
+## Version 2.19.1
 
 ## History
+
+###   Release 2.19.1   09-Oct-2026
+    * Changed OpenSSL from 3.6.1 to 3.5.9 LTS release
 
 ###   Release 2.18.0   15-May-2026
     * Updated for OpenSSL 3.6.1
